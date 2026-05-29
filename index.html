@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planos de Melhoria Contínua PEI - Sistema Institucional</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;font-size:11px;background:#eaeaea;color:#222}
+
+/* LOGIN */
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d6e57 0%,#149078 60%,#1aad8e 100%)}
+.login-card{background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.25);padding:40px 44px;width:390px}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo .logo-circle{width:72px;height:72px;background:#149078;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center}
+.login-logo .logo-circle span{font-size:28px;color:#fff;font-weight:900}
+.login-logo h2{color:#149078;font-size:15px;font-weight:700;line-height:1.3}
+.login-logo p{color:#666;font-size:10.5px;margin-top:4px}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:10.5px;color:#444;font-weight:700;margin-bottom:5px}
+.login-field input{width:100%;padding:9px 12px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;outline:none;transition:border-color .2s}
+.login-field input:focus{border-color:#149078}
+.btn-login{width:100%;padding:11px;background:#149078;color:#fff;border:none;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;transition:background .2s}
+.btn-login:hover{background:#0f7060}
+.login-error{background:#fde8e8;border:1px solid #f5a5a5;color:#c0392b;padding:8px 12px;border-radius:4px;font-size:11px;margin-bottom:12px;display:none}
+.login-hint{font-size:9.5px;color:#999;text-align:center;margin-top:14px}
+
+/* APP SHELL */
+#app{display:none;min-height:100vh}
+.top-bar{background:#149078;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:8px 16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.top-bar-logo{font-size:14px;font-weight:900;letter-spacing:.5px}
+.top-bar-subtitle{font-size:10px;opacity:.85}
+.top-bar-right{display:flex;align-items:center;gap:10px}
+.user-badge{background:rgba(255,255,255,.18);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700}
+.btn-logout{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:4px;padding:5px 14px;font-size:11px;cursor:pointer}
+.btn-logout:hover{background:rgba(255,255,255,.3)}
+
+/* TAB NAV */
+.tab-nav{background:#117a62;display:flex;flex-wrap:wrap;gap:2px;padding:6px 10px}
+.tab-btn{background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:4px 4px 0 0;padding:7px 14px;font-size:10.5px;font-weight:700;cursor:pointer;transition:background .2s}
+.tab-btn:hover{background:rgba(255,255,255,.25)}
+.tab-btn.active{background:#fff;color:#149078}
+
+/* CONTENT */
+.content-area{padding:12px;overflow-x:auto}
+
+/* INFO HEADER */
+.escola-header{background:#fff;border:1.5px solid #ccc;border-radius:5px;padding:10px 14px;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.escola-field{display:flex;align-items:center;gap:6px;font-size:11px}
+.escola-field label{font-weight:700;white-space:nowrap}
+.escola-field input{border:1px solid #bbb;border-radius:3px;padding:3px 7px;font-size:11px;width:200px}
+.escola-field input:focus{outline:none;border-color:#149078}
+
+/* PLAN TABLE */
+.plan-table{width:100%;border-collapse:collapse;font-size:10.5px;background:#fff;margin-bottom:12px}
+.plan-table th,.plan-table td{border:1px solid #bbb;padding:4px 6px;vertical-align:middle}
+.plan-table th{font-weight:700;text-align:center}
+.hdr-main{background:#149078!important;color:#fff!important;font-size:11.5px;padding:7px!important;text-align:left!important;font-weight:700!important}
+.hdr-gray{background:#D9D9D9;font-size:10.5px}
+.hdr-orange{background:#FCE5CD;font-size:10.5px}
+.hdr-green{background:#D9EAD3;font-size:10.5px}
+.hdr-section-label{font-weight:700;font-size:10px;padding:3px 6px;text-align:left}
+.cb-cell{text-align:center;width:36px}
+.cb-cell input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:#149078}
+.link-input{width:100%;border:none;border-bottom:1px dashed #bbb;font-size:10px;color:#0563C1;padding:1px 3px}
+.link-input:focus{outline:none;border-bottom-color:#149078}
+.sel-aval,.sel-melhoria{width:100%;border:1px solid #ccc;border-radius:2px;font-size:10px;padding:2px}
+.sel-aval:focus,.sel-melhoria:focus{outline:none;border-color:#149078}
+.txt-input{width:100%;border:none;border-bottom:1px dashed #bbb;font-size:10px;padding:1px 3px;resize:none;font-family:Arial,sans-serif}
+.txt-input:focus{outline:none;border-bottom-color:#149078}
+.date-input{border:1px solid #ccc;border-radius:2px;font-size:10px;padding:2px 4px;width:100%}
+.date-input:focus{outline:none;border-color:#149078}
+
+/* INDICATOR */
+.ind-wrap{background:#fff;border:1.5px solid #ccc;border-radius:5px;margin-bottom:12px;overflow:hidden}
+.ind-hdr{background:#149078;color:#fff;padding:7px 12px;font-weight:700;font-size:11px;display:flex;justify-content:space-between;align-items:center}
+.ind-hdr .avg-val{font-size:22px;font-weight:900}
+.ind-table{width:100%;border-collapse:collapse;font-size:10px}
+.ind-table th,.ind-table td{border:1px solid #ccc;padding:4px 7px;vertical-align:middle}
+.ind-table th{background:#D9D9D9;text-align:center;font-weight:700}
+.score-r{background:#F4CCCC}.score-y{background:#FFF2CC}.score-g{background:#D9EAD3}.score-dg{background:#B7E1CD}
+.score-input{width:100%;border:1px solid rgba(0,0,0,.15);background:transparent;text-align:center;font-size:10px;padding:2px}
+.score-input:focus{outline:none;border-color:#149078;background:#fff}
+.ind-total-row td{font-weight:700;background:#f5f5f5}
+.ind-scale{font-size:9px;color:#555;padding:4px 7px;font-style:italic}
+
+/* ADMIN */
+.admin-header{background:#fff;padding:14px 16px;border-bottom:2px solid #149078;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.admin-header h2{color:#149078;font-size:15px;font-weight:900}
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:14px}
+.prof-card{background:#fff;border:1.5px solid #ddd;border-radius:6px;overflow:hidden;cursor:pointer;transition:box-shadow .2s,border-color .2s}
+.prof-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.15);border-color:#149078}
+.prof-card-hdr{background:#149078;color:#fff;padding:8px 12px;font-weight:700;font-size:11.5px;display:flex;align-items:center;gap:8px}
+.prof-num{background:rgba(255,255,255,.25);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0}
+.prof-card-body{padding:10px 12px}
+.prof-nome{font-size:11px;color:#333;font-weight:700;min-height:16px}
+.prof-escola{font-size:10px;color:#777;margin-top:3px}
+.prof-progress{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.prog-dot{font-size:9px;padding:2px 5px;border-radius:3px;background:#e0e0e0;color:#555;font-weight:700}
+.prog-dot.ok{background:#D9EAD3;color:#1a6640}
+/* completion bar */
+.compl-bar-wrap{margin-top:8px;background:#eee;border-radius:20px;height:8px;overflow:hidden}
+.compl-bar-fill{height:8px;border-radius:20px;transition:width .4s}
+.compl-pct{font-size:9.5px;font-weight:700;margin-top:3px;display:flex;align-items:center;gap:5px}
+.compl-icon{width:12px;height:12px;border-radius:50%;flex-shrink:0;display:inline-block}
+.admin-detail{display:none;padding:12px}
+.btn-back{background:#149078;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-size:11px;cursor:pointer;margin-right:10px;font-weight:700}
+.btn-back:hover{background:#0f7060}
+.stat-row{display:flex;gap:24px;align-items:center}
+.stat-box .sn{font-size:24px;font-weight:900;color:#149078}
+.stat-box .sl{font-size:9.5px;color:#666}
+.viewing-lbl{background:#FFF2CC;border:1px solid #e0c040;border-radius:4px;padding:6px 12px;font-size:11px;font-weight:700;color:#7a5c00}
+.basico-lbl,.avancado-lbl{background:#FFF2CC;font-weight:700;font-size:10.5px;padding:5px 8px}
+
+/* SAVE */
+.save-indicator{position:fixed;bottom:14px;right:14px;background:#149078;color:#fff;padding:8px 18px;border-radius:20px;font-size:11px;font-weight:700;opacity:0;transition:opacity .4s;pointer-events:none;z-index:999}
+.save-indicator.show{opacity:1}
+
+/* ORIENT */
+.orient-box{background:#fff;border:1.5px solid #ccc;border-radius:5px;padding:16px 20px;max-width:960px}
+.orient-box h3{color:#149078;font-size:12px;margin-bottom:10px}
+.orient-box h4{color:#149078;font-size:11px;margin:10px 0 6px}
+.orient-box p{font-size:10.5px;line-height:1.75;margin-bottom:10px}
+
+@media(max-width:700px){
+  .tab-btn{font-size:9px;padding:5px 7px}
+  .admin-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-circle"><span>PEI</span></div>
+      <h2>Planos de Melhoria Contínua</h2>
+      <p>EE Prof Luiz Simioni Sobrinho</p>
+    </div>
+    <div id="login-error" class="login-error">Usuário ou senha incorretos.</div>
+    <div class="login-field">
+      <label>Selecione seu nome</label>
+      <select id="inp-user" style="width:100%;padding:9px 12px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;background:#fff;cursor:pointer;color:#222">
+        <option value="">— Selecione —</option>
+        <optgroup label="&#9670; Equipe Gestora">
+      <option value="Gisele (CGPG)">Gisele (CGPG)</option>
+      <option value="Guilherme (Vice-diretor)">Guilherme (Vice-diretor)</option>
+      <option value="Raffael (Diretor)">Raffael (Diretor)</option>
+      <option value="Ricardo (Vice-diretor)">Ricardo (Vice-diretor)</option>
+      <option value="Silvana (CGPG)">Silvana (CGPG)</option>
+        </optgroup>
+        <optgroup label="&#9670; Professores">
+      <option value="Ana Paula Dos Santos">Ana Paula Dos Santos</option>
+      <option value="Andreia Brandao Braga">Andreia Brandao Braga</option>
+      <option value="Angelo Jose Costa">Angelo Jose Costa</option>
+      <option value="Carlos Pereira De Souza">Carlos Pereira De Souza</option>
+      <option value="Sandra">Sandra</option>
+      <option value="Cleusa Da Silva Salomao">Cleusa Da Silva Salomao</option>
+      <option value="Edson Gomes">Edson Gomes</option>
+      <option value="Efigenia Do Rosario Araujo">Efigenia Do Rosario Araujo</option>
+      <option value="Elaine Francisca Rodrigues">Elaine Francisca Rodrigues</option>
+      <option value="Eliana Macedo Da Mota Castro">Eliana Macedo Da Mota Castro</option>
+      <option value="Gilson Santos Silva">Gilson Santos Silva</option>
+      <option value="Helio Da Silva">Helio Da Silva</option>
+      <option value="Jessica Amaral Dos Santos">Jessica Amaral Dos Santos</option>
+      <option value="Livia Cristiane Alves Pereira">Livia Cristiane Alves Pereira</option>
+      <option value="Luci Mary Venancio De Andrade Ligasacchi">Luci Mary Venancio De Andrade Ligasacchi</option>
+      <option value="Marcia Dos Reis Gaspar">Marcia Dos Reis Gaspar</option>
+      <option value="Paulo Domingos Da Silva Pereira">Paulo Domingos Da Silva Pereira</option>
+      <option value="Ricardo Costa Dobrowisch">Ricardo Costa Dobrowisch</option>
+      <option value="Rita De Cassia Franca">Rita De Cassia Franca</option>
+      <option value="Rodrigo Alves Da Silva">Rodrigo Alves Da Silva</option>
+      <option value="Santana Alves De Macedo">Santana Alves De Macedo</option>
+      <option value="Silvia Cirlene Pultrini">Silvia Cirlene Pultrini</option>
+      <option value="Sueli Maria Dos Santos Anjos">Sueli Maria Dos Santos Anjos</option>
+      <option value="Valderlane Lucia Da Silva">Valderlane Lucia Da Silva</option>
+      <option value="Wallace Viana Evangelista">Wallace Viana Evangelista</option>
+      <option value="Ysmaylla Karamy De Moura Barbosa">Ysmaylla Karamy De Moura Barbosa</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="inp-pass" placeholder="Digite sua senha" autocomplete="current-password">
+    </div>
+    <button class="btn-login" id="btn-do-login">Entrar</button>
+    <p class="login-hint">EE Prof Luiz Simioni Sobrinho &nbsp;|&nbsp; Selecione seu nome e insira a senha</p>
+  </div>
+</div>
+
+<div id="app">
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div>
+      <div class="top-bar-logo">Planos de Melhoria Cont&#237;nua PEI</div>
+      <div class="top-bar-subtitle">Sistema Institucional Multiusu&#225;rio</div>
+    </div>
+    <div class="top-bar-right">
+      <span class="user-badge" id="top-user-label"></span>
+      <button class="btn-logout" id="btn-logout">Sair</button>
+    </div>
+  </div>
+
+  <!-- TEACHER VIEW -->
+  <div id="teacher-view" style="display:none">
+    <div class="tab-nav" id="teacher-tab-nav">
+      <button class="tab-btn active" data-tab="principios">PRINC&#205;PIOS</button>
+      <button class="tab-btn" data-tab="premissas">PREMISSAS</button>
+      <button class="tab-btn" data-tab="tutoria">TUTORIA</button>
+      <button class="tab-btn" data-tab="projetovida">PROJETO DE VIDA</button>
+      <button class="tab-btn" data-tab="acolhimentos">ACOLHIMENTOS</button>
+      <button class="tab-btn" data-tab="protagonismo">PROTAGONISMO</button>
+      <button class="tab-btn" data-tab="orientacoes">ORIENTA&#199;&#213;ES</button>
+    </div>
+    <div class="content-area" id="teacher-content"></div>
+  </div>
+
+  <!-- ADMIN VIEW -->
+  <div id="admin-view" style="display:none">
+    <div id="admin-panel">
+      <div class="admin-header">
+        <div>
+          <h2>Painel Administrativo &#8212; Diretor</h2>
+          <div style="font-size:10.5px;color:#666;margin-top:3px">Visualize e monitore todos os 26 Planos de Melhoria Cont&#237;nua</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-box"><div class="sn" id="stat-total">26</div><div class="sl">Professores</div></div>
+          <div class="stat-box"><div class="sn" id="stat-started">0</div><div class="sl">Iniciados</div></div>
+          <div class="stat-box"><div class="sn" style="color:#149078" id="stat-completed">0</div><div class="sl">100% conclu&#237;dos</div></div>
+        </div>
+      </div>
+      <div class="admin-grid" id="admin-grid"></div>
+    </div>
+    <div id="admin-detail" class="admin-detail">
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <button class="btn-back" id="btn-back-admin">&#8592; Voltar ao Painel</button>
+        <div class="viewing-lbl" id="admin-viewing-label"></div>
+      </div>
+      <div class="tab-nav" id="admin-tab-nav">
+        <button class="tab-btn active" data-tab="principios">PRINC&#205;PIOS</button>
+        <button class="tab-btn" data-tab="premissas">PREMISSAS</button>
+        <button class="tab-btn" data-tab="tutoria">TUTORIA</button>
+        <button class="tab-btn" data-tab="projetovida">PROJETO DE VIDA</button>
+        <button class="tab-btn" data-tab="acolhimentos">ACOLHIMENTOS</button>
+        <button class="tab-btn" data-tab="protagonismo">PROTAGONISMO</button>
+        <button class="tab-btn" data-tab="orientacoes">ORIENTA&#199;&#213;ES</button>
+      </div>
+      <div class="content-area" id="admin-content"></div>
+    </div>
+  </div>
+</div>
+
+<div class="save-indicator" id="save-indicator">&#10003; Salvo</div>
+
+<script>
+// ═══════════════════ AUTH ═══════════════════
+var USERS = {};
+// ── ADMINISTRADORES ──
+USERS['Gisele (CGPG)']               = {pass:'Gi%51&c', role:'admin', display:'Gisele (CGPG)'};
+USERS['Guilherme (Vice-diretor)']     = {pass:'Gu#47$v', role:'admin', display:'Guilherme (Vice-diretor)'};
+USERS['Raffael (Diretor)']            = {pass:'265844',  role:'admin', display:'Raffael (Diretor)'};
+USERS['Ricardo (Vice-diretor)']       = {pass:'Ri!82*w', role:'admin', display:'Ricardo (Vice-diretor)'};
+USERS['Silvana (CGPG)']              = {pass:'Si@36#g', role:'admin', display:'Silvana (CGPG)'};
+// ── PROFESSORES ──
+USERS['Ana Paula Dos Santos']              = {pass:'F9!!n3',  role:'teacher', num:1,  display:'Ana Paula Dos Santos'};
+USERS['Andreia Brandao Braga']             = {pass:'hD5yY&',  role:'teacher', num:2,  display:'Andreia Brandao Braga'};
+USERS['Angelo Jose Costa']                 = {pass:'Dcf3%W',  role:'teacher', num:3,  display:'Angelo Jose Costa'};
+USERS['Carlos Pereira De Souza']           = {pass:'1uhWD!',  role:'teacher', num:4,  display:'Carlos Pereira De Souza'};
+USERS['Sandra']                            = {pass:'6I!K6z',  role:'teacher', num:5,  display:'Sandra'};
+USERS['Cleusa Da Silva Salomao']           = {pass:'gVT*t8',  role:'teacher', num:6,  display:'Cleusa Da Silva Salomao'};
+USERS['Edson Gomes']                       = {pass:'@iZ28R',  role:'teacher', num:7,  display:'Edson Gomes'};
+USERS['Efigenia Do Rosario Araujo']        = {pass:'nl3Y@k',  role:'teacher', num:8,  display:'Efigenia Do Rosario Araujo'};
+USERS['Elaine Francisca Rodrigues']        = {pass:'L6n0!7',  role:'teacher', num:9,  display:'Elaine Francisca Rodrigues'};
+USERS['Eliana Macedo Da Mota Castro']      = {pass:'iC!f8i',  role:'teacher', num:10, display:'Eliana Macedo Da Mota Castro'};
+USERS['Gilson Santos Silva']               = {pass:'DNlE0$',  role:'teacher', num:11, display:'Gilson Santos Silva'};
+USERS['Helio Da Silva']                    = {pass:'3H%WkA',  role:'teacher', num:12, display:'Helio Da Silva'};
+USERS['Jessica Amaral Dos Santos']         = {pass:'Y&5iHq',  role:'teacher', num:13, display:'Jessica Amaral Dos Santos'};
+USERS['Livia Cristiane Alves Pereira']     = {pass:'8G#qr7',  role:'teacher', num:14, display:'Livia Cristiane Alves Pereira'};
+USERS['Luci Mary Venancio De Andrade Ligasacchi'] = {pass:'W@B9@k', role:'teacher', num:15, display:'Luci Mary Venancio De Andrade Ligasacchi'};
+USERS['Marcia Dos Reis Gaspar']            = {pass:'@8zNYx',  role:'teacher', num:16, display:'Marcia Dos Reis Gaspar'};
+USERS['Paulo Domingos Da Silva Pereira']   = {pass:'ao4%*R',  role:'teacher', num:17, display:'Paulo Domingos Da Silva Pereira'};
+USERS['Ricardo Costa Dobrowisch']          = {pass:'&Ei1on',  role:'teacher', num:18, display:'Ricardo Costa Dobrowisch'};
+USERS['Rita De Cassia Franca']             = {pass:'u#lV7U',  role:'teacher', num:19, display:'Rita De Cassia Franca'};
+USERS['Rodrigo Alves Da Silva']            = {pass:'j34!Lu',  role:'teacher', num:20, display:'Rodrigo Alves Da Silva'};
+USERS['Santana Alves De Macedo']           = {pass:'Zy&dF5',  role:'teacher', num:21, display:'Santana Alves De Macedo'};
+USERS['Silvia Cirlene Pultrini']           = {pass:'c!H3cR',  role:'teacher', num:22, display:'Silvia Cirlene Pultrini'};
+USERS['Sueli Maria Dos Santos Anjos']      = {pass:'JN5h8&',  role:'teacher', num:23, display:'Sueli Maria Dos Santos Anjos'};
+USERS['Valderlane Lucia Da Silva']         = {pass:'j$fU2B',  role:'teacher', num:24, display:'Valderlane Lucia Da Silva'};
+USERS['Wallace Viana Evangelista']         = {pass:'t%9Bk1',  role:'teacher', num:25, display:'Wallace Viana Evangelista'};
+USERS['Ysmaylla Karamy De Moura Barbosa'] = {pass:'JxA&F1',  role:'teacher', num:26, display:'Ysmaylla Karamy De Moura Barbosa'};
+
+var currentUser = null;
+var ESCOLA_NOME = 'EE Prof Luiz Simioni Sobrinho';
+var adminViewingUser = null;
+var currentTab = 'principios';
+var adminCurrentTab = 'principios';
+
+document.getElementById('btn-do-login').addEventListener('click', doLogin);
+document.getElementById('inp-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+// inp-user is now a select — no keydown needed
+document.getElementById('btn-logout').addEventListener('click', doLogout);
+document.getElementById('btn-back-admin').addEventListener('click', backToAdmin);
+
+// Teacher tabs
+document.querySelectorAll('#teacher-tab-nav .tab-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){ switchTab(this.dataset.tab, this); });
+});
+// Admin tabs
+document.querySelectorAll('#admin-tab-nav .tab-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){ switchAdminTab(this.dataset.tab, this); });
+});
+
+function doLogin(){
+  var u = document.getElementById('inp-user').value.trim();
+  var p = document.getElementById('inp-pass').value;
+  var err = document.getElementById('login-error');
+  err.style.display = 'none';
+  if(USERS[u] && USERS[u].pass === p){
+    currentUser = u;
+    try{ sessionStorage.setItem('pmc_session_user', u); }catch(e){}
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('top-user-label').textContent = USERS[u].display;
+    if(USERS[u].role === 'admin'){
+      document.getElementById('admin-view').style.display = 'block';
+      // Admin: carrega dados de todos os professores antes de renderizar
+      preloadAllTeachers().then(function(){
+        renderAdminGrid();
+      });
+    } else {
+      document.getElementById('teacher-view').style.display = 'block';
+      currentTab = 'principios';
+      var firstBtn = document.querySelector('#teacher-tab-nav .tab-btn');
+      if(firstBtn){ firstBtn.classList.add('active'); }
+      // Professor: carrega somente seus dados
+      showLoading('⟳ Carregando seus dados...');
+      preloadUserData(u).then(function(){
+        hideLoading();
+        renderTeacherTab('principios', currentUser, false);
+        // Assina listener em tempo real para o próprio usuário
+        subscribeUser(u);
+      });
+    }
+  } else {
+    err.style.display = 'block';
+  }
+}
+
+function doLogout(){
+  currentUser = null; adminViewingUser = null;
+  try{ sessionStorage.removeItem('pmc_session_user'); }catch(e){}
+  // Limpa listeners Firebase e cache
+  unsubscribeAll();
+  _dataCache = {};
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('admin-view').style.display = 'none';
+  document.getElementById('teacher-view').style.display = 'none';
+  document.getElementById('admin-panel').style.display = 'block';
+  document.getElementById('admin-detail').style.display = 'none';
+  document.getElementById('inp-user').value = '';
+  document.getElementById('inp-pass').value = '';
+}
+
+// ═══════════════════ FIREBASE CONFIG ═══════════════════
+// ▼▼▼ SUBSTITUA pelos valores do seu projeto Firebase ▼▼▼
+var firebaseConfig = {
+  apiKey:            "SUA_API_KEY",
+  authDomain:        "SEU_PROJETO.firebaseapp.com",
+  databaseURL:       "https://SEU_PROJETO-default-rtdb.firebaseio.com",
+  projectId:         "SEU_PROJETO",
+  storageBucket:     "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SEU_SENDER_ID",
+  appId:             "SEU_APP_ID"
+};
+firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
+
+// ═══════════════════ STORAGE (Firebase Realtime Database) ═══════════════════
+// Cache local para evitar múltiplas leituras desnecessárias
+var _dataCache = {};
+
+// Gera a chave segura para o Firebase (sem caracteres proibidos)
+function fbKey(user){
+  return user.replace(/[.#$\[\]/]/g, '_');
+}
+
+// Salva no Firebase + atualiza cache local
+function saveData(user, tab, data){
+  var key = fbKey(user);
+  if(!_dataCache[key]) _dataCache[key] = {};
+  _dataCache[key][tab] = data;
+  db.ref('pmc/' + key + '/' + tab).set(data)
+    .then(function(){ flashSave(); })
+    .catch(function(err){ console.error('Erro ao salvar no Firebase:', err); flashSave('erro'); });
+}
+
+// Carrega do cache local (preenchido pelo listener em tempo real)
+function loadData(user, tab){
+  var key = fbKey(user);
+  return (_dataCache[key] && _dataCache[key][tab]) ? _dataCache[key][tab] : null;
+}
+
+// Verifica se usuário tem qualquer dado no cache
+function hasAnyData(user){
+  var key = fbKey(user);
+  if(!_dataCache[key]) return false;
+  var tabs=['principios','premissas','tutoria','projetovida','acolhimentos','protagonismo'];
+  for(var i=0;i<tabs.length;i++){ if(_dataCache[key][tabs[i]]) return true; }
+  return false;
+}
+
+// Indicador de salvamento
+function flashSave(tipo){
+  var s = document.getElementById('save-indicator');
+  if(tipo === 'erro'){
+    s.style.background = '#c0392b';
+    s.textContent = '✗ Erro ao salvar';
+  } else {
+    s.style.background = '#149078';
+    s.textContent = '✓ Salvo';
+  }
+  s.classList.add('show');
+  setTimeout(function(){ s.classList.remove('show'); }, 2500);
+}
+
+// Indicador de carregamento
+function showLoading(msg){
+  var s = document.getElementById('save-indicator');
+  s.style.background = '#e67e22';
+  s.textContent = msg || '⟳ Carregando...';
+  s.classList.add('show');
+}
+function hideLoading(){
+  var s = document.getElementById('save-indicator');
+  s.classList.remove('show');
+}
+
+// Carrega todos os dados de um usuário do Firebase e os coloca no cache
+// Retorna uma Promise que resolve quando os dados estão prontos
+function preloadUserData(user){
+  var key = fbKey(user);
+  return new Promise(function(resolve){
+    db.ref('pmc/' + key).once('value', function(snapshot){
+      _dataCache[key] = snapshot.val() || {};
+      resolve(_dataCache[key]);
+    }, function(err){
+      console.error('Erro ao carregar dados:', err);
+      _dataCache[key] = {};
+      resolve({});
+    });
+  });
+}
+
+// Assina listener em tempo real para um usuário (útil no admin para ver mudanças ao vivo)
+var _activeListeners = {};
+function subscribeUser(user){
+  var key = fbKey(user);
+  if(_activeListeners[key]) return; // já inscrito
+  _activeListeners[key] = db.ref('pmc/' + key).on('value', function(snapshot){
+    _dataCache[key] = snapshot.val() || {};
+    // Se o admin está visualizando este usuário, re-renderiza o painel
+    if(adminViewingUser === user){
+      renderTeacherTab(adminCurrentTab, user, true);
+    }
+    // Atualiza grid do admin se estiver visível
+    if(currentUser && USERS[currentUser] && USERS[currentUser].role === 'admin'){
+      renderAdminGrid();
+    }
+  });
+}
+function unsubscribeAll(){
+  Object.keys(_activeListeners).forEach(function(key){
+    db.ref('pmc/' + key).off('value', _activeListeners[key]);
+  });
+  _activeListeners = {};
+}
+
+// Pré-carrega dados de TODOS os professores (para o admin)
+function preloadAllTeachers(){
+  var teacherKeys = Object.keys(USERS).filter(function(u){ return USERS[u].role === 'teacher'; });
+  showLoading('⟳ Carregando dados...');
+  var promises = teacherKeys.map(function(u){ return preloadUserData(u); });
+  return Promise.all(promises).then(function(){
+    hideLoading();
+    // Assina listener em tempo real para cada professor
+    teacherKeys.forEach(function(u){ subscribeUser(u); });
+  });
+}
+
+// ═══════════════════ TEMATICA DATA ═══════════════════
+var TEMATICAS = {
+  principios:{
+    label:'PRINCÍPIOS',
+    painel:'Plano de Melhoria Contínua dos EDUCADORES - Temática PRINCÍPIOS',
+    p1:'PARTE 1 - Ficha de Aplicação (FA)',
+    p2:'Autoavaliação (AR1)',
+    p3:'PARTE 3 - Comportamentos e atitudes a melhorar',
+    basico:[
+      {id:1,desc:"Dou 'bom dia' para os estudantes e colegas."},
+      {id:2,desc:"Chamo os estudantes pelos nomes."},
+      {id:3,desc:"Estou atento ao estado físico e emocional do estudante, se necessário agir com empatia."},
+      {id:4,desc:"Ofereço e/ou sirvo um copo de água, uma cadeira para sentar, uma ajuda etc."},
+      {id:5,desc:"Identifico fragilidades e oportunidades de ajuda."},
+      {id:6,desc:"Identifico virtudes / características positivas para elogiar."},
+      {id:7,desc:"Ofereço / troco os 'pequenos nadas': um sorriso, um olhar carinhoso, um sinal positivo, um aperto de mãos, um abraço etc."},
+      {id:8,desc:"No início da aula pergunto como estão se sentindo, pergunto sobre algo que queiram falar e pratico a escuta ativa."},
+      {id:9,desc:"Trabalho boas práticas de convivência: criar dinâmicas, conversas individuais e coletivas etc."},
+      {id:10,desc:"Crio combinados individuais e coletivos, por meio de conversas individuais e rodas de conversa."}
+    ],
+    avancado:[
+      {id:11,desc:"Compartilho experiências positivas e desafiadoras."},
+      {id:12,desc:"Identifico habilidades, elogiar e incentivar."},
+      {id:13,desc:"Conto os sonhos atuais e antigos para os estudantes."},
+      {id:14,desc:"Conto o Projeto de Vida para os estudantes."},
+      {id:15,desc:"Identifico comportamentos inapropriados para ajudar com empatia ou pedir ajuda para os colegas."},
+      {id:16,desc:"Identifico avanços em comportamento (principalmente os primeiros), elogiar e incentivar."},
+      {id:17,desc:"Identifico dificuldades em aprendizagem para ajudar ou pedir ajuda para os colegas."},
+      {id:18,desc:"Identifico avanços em aprendizagem (principalmente os primeiros), elogiar e incentivar."},
+      {id:19,desc:"Trabalho atividades de cooperação, trabalho em equipe e fazer juntos."},
+      {id:20,desc:"Trabalho atividades de diversidade, respeito às diferenças, preconceito, inclusão, coletividade, cultura de paz e empatia."},
+      {id:21,desc:"Mostro vídeos ou imagens para iniciar uma aula."},
+      {id:22,desc:"Faço leituras coletivas sobre uma matéria."},
+      {id:23,desc:"Leio textos, identifico palavras chave e procuro significados no dicionário."},
+      {id:24,desc:"Desenvolvo oficinas para estimular habilidades manuais e técnicas."},
+      {id:25,desc:"Trabalho atividades sobre valores, ética, justiça e dignidade."},
+      {id:26,desc:"Trabalho rodas de conversa com os estudantes sobre assuntos relevantes e oportunos."},
+      {id:27,desc:"Solicito propostas de projetos para serem desenvolvidos e autodirigidos pelos estudantes."},
+      {id:28,desc:"Desenvolvo projetos de soluções de problemas para melhorar o ambiente escolar."}
+    ],
+    ind_est:{
+      title:'Indicador de Excelência - Temática PRINCÍPIOS (AR2) - Avaliação da escola pelos Estudantes',
+      qs:["Os professores se preocupam comigo, conhecem minhas necessidades e estão sempre disponíveis para me ajudar quando necessito?",
+          "Os professores se preocupam com meu aprendizado e me ajudam a aprender cada vez mais?",
+          "Os estudantes têm espaço para se envolver e propor ações para melhorar a escola e comunidade?"]
+    },
+    ind_edu:{
+      title:'Avaliação do Líder (DIRETOR) - realizada pelos Educadores (AL2) - Temática PRINCÍPIOS',
+      qs:["O Diretor me orienta sobre a prática dos Princípios e me ajuda quando preciso?",
+          "O Diretor conversa, faz alinhamentos e combinados com os educadores para melhorar a prática dos Princípios na escola?",
+          "O Diretor conversa com os estudantes para entender suas necessidades e satisfação com a prática dos educadores?"]
+    }
+  },
+  premissas:{
+    label:'PREMISSAS',
+    painel:'Plano de Melhoria Contínua dos EDUCADORES - Temática PREMISSAS',
+    p1:'PARTE 1 - Ficha de Aplicação (FA)',
+    p2:'Autoavaliação (AR1)',
+    p3:'PARTE 3 - Comportamentos, atitudes e abordagens a melhorar',
+    basico:[
+      {id:1,desc:"Acolho e conheço os educadores e profissionais da escola.",foco:"PROTAGONISMO"},
+      {id:2,desc:"Estudo os Percursos Premissas, buscando sua interlocução com os comportamentos e atitudes dos Princípios.",foco:"FORMAÇÃO CONTINUADA"},
+      {id:3,desc:"Promovo e incentivo um ambiente de respeito às diferenças e individualidades entre os estudantes.",foco:"PROTAGONISMO"},
+      {id:4,desc:"Ouço e valorizo os estudantes para construir vínculos positivos.",foco:"PROTAGONISMO"},
+      {id:5,desc:"Elaboro e implemento os Instrumentos de Gestão do PEI como: Agendas, Reuniões de Alinhamentos, Guias de Aprendizagem, Planos de Melhorias dos Percursos.",foco:"CORRESPONSABILIDADE"},
+      {id:7,desc:"Colaboro com a Equipe Gestora na formação dos professores.",foco:"FORMAÇÃO CONTINUADA"},
+      {id:8,desc:"Sou corresponsável na elaboração e implementação do Plano de Ação.",foco:"FORMAÇÃO CONTINUADA"},
+      {id:9,desc:"Colaboro com a Equipe Gestora na sensibilização dos pais/responsáveis dos estudantes sobre o PEI.",foco:"EXCELÊNCIA EM GESTÃO"},
+      {id:10,desc:"Sou corresponsável pela gestão dos recursos de tecnologias que podem ser utilizados no processo ensino e aprendizagem.",foco:"CORRESPONSABILIDADE"},
+      {id:11,desc:"Oriento pais/responsáveis sobre o desempenho acadêmico dos estudantes.",foco:"PROTAGONISMO"}
+    ],
+    avancado:[
+      {id:12,desc:"Para Professor, relaciono os conteúdos do meu componente curricular com os demais componentes curriculares da BNCC.",foco:"FORMAÇÃO CONTINUADA"},
+      {id:13,desc:"Para Professor, tenho conhecimento e pratico a interdisciplinaridade nas áreas de conhecimento.",foco:"FORMAÇÃO CONTINUADA"},
+      {id:14,desc:"Incentivo os educadores a trabalharem em um objetivo comum por meio do monitoramento das metas e ações do Plano de Ação da Escola.",foco:"FORMAÇÃO CONTINUADA"},
+      {id:15,desc:"Apoio e desenvolvo práticas para conhecer e apoiar o Projeto de Vida dos profissionais.",foco:"CORRESPONSABILIDADE"},
+      {id:16,desc:"Promovo práticas pedagógicas que potencializam e viabilizam o Projeto de Vida dos estudantes em todo ambiente escolar.",foco:"CORRESPONSABILIDADE"},
+      {id:17,desc:"Oriento pais/responsáveis em como apoiar na construção do Projeto de Vida e no Protagonismo Juvenil.",foco:"CORRESPONSABILIDADE"},
+      {id:18,desc:"Mostro-me aberto para ouvir e apoiar os estudantes principalmente na Tutoria e na gestão de sala de aula.",foco:"EXCELÊNCIA EM GESTÃO"},
+      {id:19,desc:"Apoio os estudantes no processo de formação acadêmica, profissional e pessoal.",foco:"FORMAÇÃO CONTINUADA"},
+      {id:20,desc:"Propicio espaços e oportunidades para que os estudantes sejam o sujeito da ação, atuando como jovens protagonistas na escola.",foco:"PROTAGONISMO"},
+      {id:21,desc:"Monitoro as atuações dos Jovens Protagonistas na escola: Líderes de Turma, Presidente de Clubes Juvenis, Grêmio Estudantil.",foco:"PROTAGONISMO"},
+      {id:22,desc:"Para o Diretor, monitoro e reviso metas e ações do Plano de Ação da escola. Para o Professor, colaboro no monitoramento e revisão do Plano de Ação.",foco:"PROTAGONISMO"},
+      {id:23,desc:"Tenho visão crítica para identificar avanços e pontos de melhorias sobre o trabalho desenvolvido na escola.",foco:"EXCELÊNCIA EM GESTÃO"},
+      {id:24,desc:"Identifico e registro boas práticas minhas ou de profissionais com resultados excelentes na escola.",foco:"EXCELÊNCIA EM GESTÃO"},
+      {id:25,desc:"Proponho e implanto ações de replicabilidade de boas práticas com excelentes resultados na escola.",foco:"REPLICABILIDADE"},
+      {id:26,desc:"Compartilho as boas práticas com outras escolas do Programa Ensino Integral.",foco:"EXCELÊNCIA EM GESTÃO"},
+      {id:27,desc:"Semestralmente, monitoro e reviso as metas e ações do Plano de Ação, inserindo novas metas e novas ações para o próximo ciclo.",foco:"REPLICABILIDADE"}
+    ],
+    ind_est:{
+      title:'Indicador de Excelência - Temática PREMISSAS (AR2) - Avaliação da escola pelos Educadores',
+      qs:["Os educadores assumem suas responsabilidades e são proativos nas soluções de problemas e melhoria contínua tornando-se exemplo para a Comunidade Escolar.",
+          "A escola consegue evoluir continuamente seus resultados e atingir suas metas de forma consistente a partir de Instrumentos de Gestão compartilhados.",
+          "Os educadores buscam aperfeiçoamento contínuo das suas habilidades e competências para melhorar o desempenho nas suas atribuições."]
+    },
+    ind_edu:{
+      title:'Avaliação do Líder (DIRETOR) - realizada pelos Educadores (AL2) - Temática PREMISSAS',
+      qs:["O Diretor me orienta, faz alinhamentos e combinados sobre a melhoria das práticas de Premissas e me ajuda sempre que necessário.",
+          "O Diretor exerce uma liderança inspiradora criando espaços e oportunidades para o desenvolvimento do Protagonismo Sênior.",
+          "O Diretor mobiliza e apoia os educadores para atingir as metas estabelecidas nos Instrumentos de Gestão da escola."]
+    }
+  },
+  tutoria:{
+    label:'TUTORIA',
+    painel:'Plano de Melhoria Contínua dos EDUCADORES - Temática TUTORIA',
+    p1:'PARTE 1 - Ficha de Aplicação (FA)',
+    p2:'Autoavaliação (AR1)',
+    p3:'PARTE 3 - Comportamentos e atitudes a melhorar',
+    basico:[
+      {id:1,desc:"Atinjo as metas de número de encontros de tutoria por mês (2x PEI 9h / 1x PEI 7h) com cada um dos meus tutorados."},
+      {id:2,desc:"Atinjo as metas de número de encontros coletivos de tutoria semanais (2x PEI 9h / 1x PEI 7h) com os meus tutorados."},
+      {id:3,desc:"Acolho os meus tutorados: chamar pelo nome, dar bom dia a todos, faço as trocas dos pequenos nadas: sorriso, olhar carinhoso, sinal de positivo, palavras amigas etc."},
+      {id:4,desc:"Ofereço coisas para os meus tutorados: um copo de água, uma cadeira para o tutorado se sentar, uma ajuda etc."},
+      {id:5,desc:"Para estimular a comunicação, especialmente com os estudantes mais reticentes, compartilho minhas próprias dificuldades, obstáculos e conquistas relevantes."},
+      {id:6,desc:"De forma oportuna converso sobre a sua família, faço perguntas sobre a convivência familiar etc."},
+      {id:7,desc:"Aproveito as oportunidades para compartilhar meus sonhos e meu projeto de vida com meus tutorados e com os demais estudantes."},
+      {id:8,desc:"Para tutorados que ainda não definiram seus sonhos e/ou Projeto de Vida, conto meus sonhos de juventude e atuais e conto o meu Projeto de Vida."},
+      {id:9,desc:"Para tutorados que já possuem sonhos e/ou um Projeto de Vida, ouço suas histórias e enfatizo a importância do estudo como meio para alcançar seus objetivos."}
+    ],
+    avancado:[
+      {id:10,desc:"Sei das principais virtudes dos meus tutorados e de forma oportuna faço elogios."},
+      {id:11,desc:"Sei das principais fragilidades dos meus tutorados e de forma oportuna dou abertura e converso com eles sobre esses pontos."},
+      {id:12,desc:"Me preocupo e cuido dos meus tutorados com relação às suas dimensões: cognitiva/intelectual/aprendizado, social, emocional/afetiva, ética/moral e física/corporal/bem-estar."},
+      {id:13,desc:"Presto atenção nos avanços dos meus tutorados (principalmente os primeiros avanços), daí em seguida faço elogios e os incentivo a continuar melhorando."},
+      {id:14,desc:"Sei dos gostos e preferências dos meus tutorados, oportunamente provoco conversas sobre esses pontos de seu interesse."},
+      {id:15,desc:"Acompanho a evolução do aprendizado dos meus tutorados, discutimos as ações necessárias para aprimorar e ofereço suporte em seus desenvolvimentos acadêmicos."},
+      {id:16,desc:"Para auxiliar meus tutorados a superar dificuldades, 'faço junto' com eles, promovendo sua autonomia."},
+      {id:17,desc:"De forma oportuna, converso sobre Projeto de Vida com meus tutorados, enfatizando que o Projeto de Vida vai além de uma profissão."},
+      {id:18,desc:"Nos encontros coletivos de tutoria, planejo as atividades com antecedência, as executo, faço os registros e identifico pontos de melhoria para cada encontro."},
+      {id:19,desc:"Construo e monitoro os combinados com os meus tutorados sobre o que fazer e quando fazer para melhorar os seus aprendizados."},
+      {id:20,desc:"Construo e monitoro os combinados com os meus tutorados sobre o que NÃO fazer."}
+    ],
+    ind_est:{
+      title:'Indicador de Excelência - Temática TUTORIA (AR2) - Avaliação da escola pelos Estudantes',
+      qs:["O meu tutor conversa comigo sobre os meus avanços, me elogia e me incentiva a buscar o meu Projeto de Vida?",
+          "O meu tutor se interessa pelo meu aprendizado, me ajuda a estudar e a aprender mais?",
+          "O meu tutor me acolhe e me ajuda quando preciso de apoio diante dos meus desafios pessoais?"]
+    },
+    ind_edu:{
+      title:'Avaliação do Líder (VICE-DIRETOR) - realizada pelos Educadores (AL2) - Temática TUTORIA',
+      qs:["O Vice-diretor me orienta sobre a Tutoria e me ajuda quando preciso.",
+          "Vejo o Vice-diretor conversando/fazendo alinhamentos e combinados com os Tutores para melhorar a Tutoria na escola.",
+          "Vejo o Vice-diretor conversando com os estudantes, principalmente aqueles estudantes que mais precisam de ajuda."]
+    }
+  },
+  projetovida:{
+    label:'PROJETO DE VIDA',
+    painel:'Plano de Melhoria Contínua dos EDUCADORES - Temática PROJETO DE VIDA',
+    p1:'PARTE 1 - Ficha de Aplicação (FA)',
+    p2:'Autoavaliação (AR1)',
+    p3:'PARTE 3 - Comportamentos, atitudes e abordagens a melhorar',
+    basico:[
+      {id:1,desc:"Realizo o acolhimento do estudante conforme orientações dadas nas FAs de Princípios e Tutoria."},
+      {id:2,desc:"Conto os meus sonhos e Projeto de Vida para os estudantes."},
+      {id:3,desc:"Crio um ambiente acolhedor para que os estudantes compartilhem: história pessoal, casos, histórias de vida, planos, sonhos e Projetos de Vida."},
+      {id:4,desc:"Explico para os estudantes o que significa Projeto de Vida."},
+      {id:5,desc:"Conheço os estudantes, fazendo perguntas e buscando informações sobre eles: gostos, preferências, o que gosta fazer etc."},
+      {id:6,desc:"Crio combinados individuais e coletivos, por meio de conversas e rodas de conversa."},
+      {id:7,desc:"Reconheço explicitamente a capacidade dos estudantes para desenvolver atividades, elogiá-los e incentivá-los."},
+      {id:8,desc:"Inspiro e provoco os estudantes sobre seus sonhos, bem como o percurso necessário para alcançá-lo."},
+      {id:9,desc:"Monitoro a construção dos Projetos de Vida dos estudantes, identificando se têm objetivos concretos, significado pessoal, planejamento e valores éticos."},
+      {id:10,desc:"Informo os familiares/responsáveis dos estudantes sobre o Projeto de Vida e a importância dele para o desenvolvimento acadêmico."}
+    ],
+    avancado:[
+      {id:11,desc:"Verifico se os estudantes têm sonhos e/ou uma versão parcial dos Projetos de Vida."},
+      {id:12,desc:"Convido os familiares/responsáveis dos estudantes para apoiar o desenvolvimento dos Projetos de Vida deles."},
+      {id:13,desc:"Desenvolvo atividades/dinâmicas/conversas em que os estudantes tenham que aprender a lidar com novidades e imprevistos."},
+      {id:14,desc:"Desenvolvo atividades/dinâmicas/conversas individuais ou coletivas para criação de valores coletivos."},
+      {id:15,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de cultivar interesses variados: conhecimentos, atividades, culturais, entretenimento etc."},
+      {id:16,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de expor ideias de forma respeitosa, mantendo sua autenticidade."},
+      {id:17,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de fazer escolhas, avaliando suas consequências."},
+      {id:18,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de formular objetivos de curto prazo e estratégias para realizá-los."},
+      {id:19,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de manter a motivação para realizar e concluir as tarefas escolares com empenho."},
+      {id:20,desc:"Verifico se os estudantes possuem uma versão de Projeto de Vida e se está alinhado com valores éticos."},
+      {id:21,desc:"Em casos de extrema gravidade de estudantes com Projetos de Vida que gerem riscos, encaminho para a Vice-direção."},
+      {id:22,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de identificar suas habilidades e vulnerabilidades."},
+      {id:23,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de agir com empatia, sendo capaz de compreender a perspectiva e os sentimentos dos outros."},
+      {id:24,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de fazer escolhas baseadas em critérios pré-estabelecidos."},
+      {id:25,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de planejar caminhos e estratégias para superar dificuldades."},
+      {id:26,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de compreender seu papel na sociedade e como pode ajudar a melhorá-la."},
+      {id:27,desc:"Verifico se os estudantes estão seguros para construir e realizar seu Projeto de Vida ao longo de toda a sua trajetória, para além da escola."},
+      {id:28,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de construir ideias positivas sobre si mesmo e ideais de vida."},
+      {id:29,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de criar redes de relacionamentos saudáveis, baseados na confiança mútua."},
+      {id:30,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de tomar decisões para o futuro de forma responsável e autônoma."},
+      {id:31,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de se apropriar de instrumentos práticos para elaborar metas escalonadas e estratégias viáveis."},
+      {id:32,desc:"Desenvolvo atividades/dinâmicas/conversas para promover a capacidade de buscar respostas concretas sobre seu futuro pessoal e profissional (palestras, visitas a faculdades, etc.)."},
+      {id:33,desc:"Peço para os estudantes avaliarem o nível de satisfação com seus Projetos de Vida."}
+    ],
+    ind_est:{
+      title:'Indicador de Excelência - Temática PROJETO DE VIDA (AR2) - Avaliação da escola pelos Estudantes',
+      qs:["Os educadores contam os seus sonhos e se interessam pelos meus sonhos.",
+          "Os educadores me acompanham e me apoiam na construção do meu Projeto de Vida.",
+          "Os educadores apoiam o meu desenvolvimento pessoal e acadêmico para alcançar meu Projeto de Vida."]
+    },
+    ind_edu:{
+      title:'Avaliação do Líder (VICE-DIRETOR) - realizada pelos Educadores (AL2) - Temática PROJETO DE VIDA',
+      qs:["O Vice-Diretor me orienta sobre como apoiar meus estudantes em relação aos seus Projetos de Vida.",
+          "O Vice-Diretor conversa, faz alinhamentos e combinados com os educadores para melhorar a prática do Projeto de Vida na escola.",
+          "O Vice-Diretor conversa com os estudantes para entender a evolução e satisfação com seus Projetos de Vida."]
+    }
+  },
+  acolhimentos:{
+    label:'ACOLHIMENTOS',
+    painel:'Plano de Melhoria Contínua dos EDUCADORES - Temática ACOLHIMENTOS',
+    p1:'PARTE 1 - Ficha de Aplicação (FA)',
+    p2:'Autoavaliação (AR1)',
+    p3:'PARTE 3 - Comportamentos e atitudes a melhorar',
+    basico:[
+      {id:1,desc:"Dou 'bom dia' para os estudantes, as famílias, os educadores e demais profissionais da escola."},
+      {id:2,desc:"Chamo todos pelos nomes ou pergunto os nomes daqueles que ainda não conheço para cumprimentá-los."},
+      {id:3,desc:"Estou atento ao estado físico e emocional de estudantes, profissionais e famílias, para, se necessário, agir com empatia."},
+      {id:4,desc:"Ofereço um copo de água, uma cadeira para sentar, uma ajuda etc."},
+      {id:5,desc:"Acolho meus estudantes, profissionais e famílias com um sorriso, uma gentileza ou um gesto de atenção ou reconhecimento por seus resultados e avanços."},
+      {id:6,desc:"Identifico virtudes / características positivas dos estudantes, profissionais e familiares e elogiar."},
+      {id:7,desc:"No início do dia e/ou em conversas oportunas pergunto como o outro está, pergunto sobre algo que queira falar e pratico a escuta ativa."},
+      {id:8,desc:"Trabalho boas práticas de convivência: crio dinâmicas de acolhimento nas salas, conversas individuais e coletivas etc."},
+      {id:9,desc:"Crio combinados individuais e coletivos, por meio de conversas individuais e coletivas."},
+      {id:10,desc:"Acolho as experiências positivas e desafiadoras trazidas pelos estudantes, profissionais e famílias, com empatia."}
+    ],
+    avancado:[
+      {id:11,desc:"Estou disponível para participar das atividades de acolhimento inicial com estudantes, professores e famílias."},
+      {id:12,desc:"Estou disponível para participar das atividades de acolhimento diário junto com a equipe gestora e estudantes."},
+      {id:13,desc:"Proponho atividades ou temas para os acolhimentos diários temáticos."},
+      {id:14,desc:"Utilizo do espaço do acolhimento diário para despertar o interesse dos estudantes pelas disciplinas que ministro."},
+      {id:15,desc:"Comunico a gestão escolar situações que merecem ser pauta de conscientização durante o acolhimento diário ou bimestral."},
+      {id:16,desc:"Comunico a gestão escolar resultados que merecem ser celebrados durante o acolhimento diário ou bimestral."},
+      {id:17,desc:"Utilizo o espaço do acolhimento diário para, junto com os estudantes, apoiar os Clubes Juvenis apadrinhados por mim."},
+      {id:18,desc:"Incentivo os estudantes a abordar temas atuais e relevantes discutidos nas aulas durante o acolhimento diário."},
+      {id:19,desc:"Acolho os colegas novos ou com dificuldades nas suas atividades ou nos relacionamentos, apoiando e incentivando seu crescimento."}
+    ],
+    ind_est:{
+      title:'Indicador de Excelência - Temática ACOLHIMENTOS (AR2) - Avaliação da escola pelos Estudantes',
+      qs:["Os educadores acolhem e valorizam minhas necessidades e o que eu tenho a dizer.",
+          "Sou recebido diariamente com entusiasmo e me sinto bem-vindo na escola.",
+          "A escola promove um ambiente seguro e acolhedor, onde os estudantes podem expressar livremente suas emoções."]
+    },
+    ind_edu:{
+      title:'Avaliação do Líder (DIRETOR) - realizada pelos Educadores (AL2) - Temática ACOLHIMENTOS',
+      qs:["O Diretor me acolhe, valoriza minhas dúvidas e necessidades e o que eu tenho a dizer.",
+          "O Diretor me recebe diariamente com entusiasmo e eu me sinto bem-vindo e pertencente à escola.",
+          "O Diretor promove um ambiente seguro e acolhedor, onde todos podem expressar livremente suas emoções."]
+    }
+  },
+  protagonismo:{
+    label:'PROTAGONISMO',
+    painel:'Plano de Melhoria Contínua - Temática PRÁTICAS DE PROTAGONISMO JUVENIL',
+    p1:'PARTE 1 - Ficha de Aplicação (FA)',
+    p2:'Autoavaliação (AR1)',
+    p3:'PARTE 3 - Comportamentos e atitudes a melhorar',
+    basico:[
+      {id:1,desc:"Realizo formações sobre protagonismo para os educadores."},
+      {id:2,desc:"Realizo sensibilizações e formações sobre protagonismo para os estudantes, estimulando a participação consciente."},
+      {id:3,desc:"Garanto que todas posições de Jovem Acolhedor/Líderes de Turma/Presidente de Clube estejam devidamente preenchidas."},
+      {id:4,desc:"Estabeleço e realizo reuniões periódicas com cada grupo de: Jovens Acolhedores/Líderes de Turma/Presidentes de Clube."},
+      {id:5,desc:"Crio combinados com os Jovens Acolhedores/Líderes de Turma/Presidentes de Clube sobre suas atuações enquanto líderes na escola."},
+      {id:6,desc:"Colaboro com os esforços na construção das agendas dos Jovens Acolhedores, das turmas e dos Clubes, juntamente com os jovens protagonistas nas suas respectivas posições."},
+      {id:7,desc:"Colaboro com a organização de espaços e horários para realização das atividades dos Jovens Acolhedores, Líderes de Turmas e dos Presidentes de Clubes."},
+      {id:8,desc:"Para Jovens Acolhedores promovo formação e treinamento para realizar as atividades de Acolhimentos iniciais de profissionais, estudantes e familiares, e também para realizar Acolhimento Diário para estudantes."},
+      {id:9,desc:"Para Clube Juvenil defino junto aos presidentes de Clube: Visão do Clube, Objetivo Intermediário e Plano de Ação para atingir o Objetivo Intermediário e a Visão do Clube."},
+      {id:10,desc:"Realizo alinhamentos quinzenais/periódicos com os grupos: Jovens Acolhedores, Líderes de Turma e Presidentes de Clube."},
+      {id:11,desc:"Compartilho problemas ou oportunidades de melhoria com os Jovens Acolhedores/Líderes de Turma/Presidentes de Clube para poderem contribuir no desenvolvimento de soluções."},
+      {id:12,desc:"Crio espaços, oportunidades, projetos e/ou ações concretas de incentivo ao protagonismo dos estudantes na busca por soluções e melhorias no cotidiano escolar."},
+      {id:13,desc:"Planejo a participação dos Jovens Acolhedores, Líderes de Turma e Presidentes de Clube em ações específicas da escola."},
+      {id:14,desc:"Executo ações de Protagonismo Juvenil com os estudantes. Colaboro e faço junto com os estudantes."},
+      {id:15,desc:"Avalio em conjunto com os Jovens Acolhedores, Líderes de Turma e Presidentes de Clube a efetividade das ações realizadas."}
+    ],
+    avancado:[
+      {id:16,desc:"Acolho e colaboro com as iniciativas trazidas pelos Jovens Acolhedores, Líderes de Turma e Presidentes de Clube."},
+      {id:17,desc:"Acolho o planejamento de ações protagonistas trazidas pelos Jovens Acolhedores, Líderes de Turma e Presidentes de Clube."},
+      {id:18,desc:"Viabilizo a execução autônoma das ações de protagonismo juvenil dos Jovens Acolhedores, Líderes de Turma e Presidentes de Clube."},
+      {id:19,desc:"Supervisiono a atuação dos Jovens Acolhedores, Líderes de Turma e Presidentes de Clube nas suas atribuições."},
+      {id:20,desc:"Facilito a avaliação dos resultados das ações em conjunto com os Jovens Acolhedores, Líderes de Turma e Presidentes de Clube."},
+      {id:21,desc:"Promovo conversas com cada grupo para alinhamento e avaliações de resultados: Jovens Acolhedores, Líderes de Turma e Presidentes de Clube."},
+      {id:22,desc:"Elogio e reconheço as boas práticas e incentivo a melhoria contínua nas atuações dos Jovens Acolhedores, Líderes de Turma e Presidentes de Clube."},
+      {id:23,desc:"Ofereço feedbacks individuais e coletivos para os Jovens Acolhedores, Líderes de Turma e Presidentes de Clube."},
+      {id:24,desc:"Celebro os resultados positivos com os Jovens Acolhedores, Líderes de Turma e Presidentes de Clube."},
+      {id:25,desc:"Celebro os resultados positivos com os estudantes de forma individual e coletiva."}
+    ],
+    ind_est:{
+      title:'Indicador de Excelência - Temática PRÁTICAS DE PROTAGONISMO JUVENIL (AR2) - Avaliação da escola pelos Estudantes',
+      qs:["Participo ativamente da construção de soluções para melhoria da minha escola.",
+          "Me sinto responsável pelos meus estudos e consequências das minhas escolhas.",
+          "Os educadores apoiam, orientam e estimulam o meu protagonismo."]
+    },
+    ind_edu:{
+      title:'Avaliação do Líder (DIRETOR) - realizada pelos Educadores (AL2) - Temática PRÁTICAS DE PROTAGONISMO JUVENIL',
+      qs:["O Diretor realiza formações e me orienta sobre como despertar o protagonismo dos estudantes em todas as suas etapas.",
+          "O Diretor se mostra aberto às sugestões e iniciativas dos estudantes na solução dos problemas da escola e da comunidade.",
+          "O Diretor é referência de líder protagonista, servindo de exemplo para professores e estudantes."]
+    }
+  }
+};
+
+// ═══════════════════ HTML BUILDERS ═══════════════════
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function buildRow(tab, item, readOnly){
+  var ro = readOnly ? 'readonly' : '';
+  var roCb = readOnly ? 'disabled' : '';
+  var u = readOnly ? adminViewingUser : currentUser;
+  var focoHtml = item.foco ? ' <span style="font-size:9px;color:#888">['+esc(item.foco)+']</span>' : '';
+  var onChange = "autoSave('"+u+"','"+tab+"')";
+  var row = '<tr>';
+  row += '<td style="text-align:center;width:28px;color:#555">'+item.id+'</td>';
+  row += '<td>'+esc(item.desc)+focoHtml+'</td>';
+  row += '<td class="cb-cell"><input type="checkbox" id="'+tab+'_plan_'+item.id+'" '+roCb+' onchange="'+onChange+'"></td>';
+  row += '<td class="cb-cell"><input type="checkbox" id="'+tab+'_real_'+item.id+'" '+roCb+' onchange="'+onChange+'"></td>';
+  row += '<td><input class="link-input" type="url" id="'+tab+'_port_'+item.id+'" placeholder="Link" '+ro+' onchange="'+onChange+'"></td>';
+  row += '<td><select class="sel-aval" id="'+tab+'_aval_'+item.id+'" '+roCb+' onchange="'+onChange+'">';
+  row += '<option value="">—</option><option>1- Raramente</option><option>2- Às vezes</option><option>3- Frequentemente</option><option>4- Sempre</option>';
+  row += '</select></td>';
+  row += '<td><textarea class="txt-input" id="'+tab+'_quais_'+item.id+'" rows="2" '+ro+' onchange="'+onChange+'"></textarea></td>';
+  row += '<td><input class="date-input" type="date" id="'+tab+'_prazo_'+item.id+'" '+ro+' onchange="'+onChange+'"></td>';
+  row += '<td><select class="sel-melhoria" id="'+tab+'_melh_'+item.id+'" '+roCb+' onchange="'+onChange+'">';
+  row += '<option value="">—</option><option>Realizada</option><option>Não Realizada</option><option>Em andamento</option>';
+  row += '</select></td>';
+  row += '</tr>';
+  return row;
+}
+
+function buildIndicatorTable(prefix, ind, tab, readOnly){
+  var ro = readOnly ? 'readonly' : '';
+  var u = readOnly ? adminViewingUser : currentUser;
+  var onChange = "updateAvg('"+prefix+"');autoSave('"+u+"','"+tab+"')";
+  var bimestres = ['1º bimestre','2º bimestre','3º bimestre','4º bimestre'];
+  var html = '<div class="ind-wrap">';
+  html += '<div class="ind-hdr"><span>'+esc(ind.title)+'</span>';
+  html += '<span>Pontuação &#9658; <span class="avg-val" id="'+prefix+'_avg">—</span></span></div>';
+  html += '<table class="ind-table"><thead><tr>';
+  html += '<th class="ind-col-q" style="width:40%;text-align:left">Perguntas</th>';
+  html += '<th class="score-r" style="width:8%">2,5<br><small>Raramente</small></th>';
+  html += '<th class="score-y" style="width:8%">5<br><small>Às vezes</small></th>';
+  html += '<th class="score-g" style="width:8%">7,5<br><small>Frequentemente</small></th>';
+  html += '<th class="score-dg" style="width:8%">10<br><small>Sempre</small></th>';
+  html += '<th style="width:12%">Bimestre</th>';
+  html += '<th style="width:10%">Média Registrada</th>';
+  html += '</tr></thead><tbody>';
+  for(var i=0;i<ind.qs.length;i++){
+    html += '<tr>';
+    html += '<td>'+(i+1)+'. '+esc(ind.qs[i])+'</td>';
+    html += '<td class="score-r"><input class="score-input" type="number" min="0" id="'+prefix+'_r_'+i+'" placeholder="0" '+ro+' oninput="'+onChange+'"></td>';
+    html += '<td class="score-y"><input class="score-input" type="number" min="0" id="'+prefix+'_av_'+i+'" placeholder="0" '+ro+' oninput="'+onChange+'"></td>';
+    html += '<td class="score-g"><input class="score-input" type="number" min="0" id="'+prefix+'_fr_'+i+'" placeholder="0" '+ro+' oninput="'+onChange+'"></td>';
+    html += '<td class="score-dg"><input class="score-input" type="number" min="0" id="'+prefix+'_s_'+i+'" placeholder="0" '+ro+' oninput="'+onChange+'"></td>';
+    html += '<td style="background:#D8D8D8;text-align:center;font-size:10px">'+(bimestres[i]||'')+'</td>';
+    html += '<td><input class="score-input" type="number" step="0.1" id="'+prefix+'_mon_'+i+'" placeholder="—" '+ro+' style="background:#FFCDCD" oninput="autoSave(\''+u+'\',\''+tab+'\')"></td>';
+    html += '</tr>';
+  }
+  html += '<tr class="ind-total-row">';
+  html += '<td>Total</td>';
+  html += '<td id="'+prefix+'_tot_r" style="text-align:center;background:#F4CCCC">0</td>';
+  html += '<td id="'+prefix+'_tot_av" style="text-align:center;background:#FFF2CC">0</td>';
+  html += '<td id="'+prefix+'_tot_fr" style="text-align:center;background:#D9EAD3">0</td>';
+  html += '<td id="'+prefix+'_tot_s" style="text-align:center;background:#B7E1CD">0</td>';
+  html += '<td colspan="2" class="ind-scale">*Escala - 2,5 Raramente; 5 Às vezes; 7,5 Frequentemente; 10 Sempre</td>';
+  html += '</tr></tbody></table></div>';
+  return html;
+}
+
+function renderTeacherTab(tab, user, readOnly){
+  var container = readOnly ? document.getElementById('admin-content') : document.getElementById('teacher-content');
+  if(!container) return;
+  if(tab==='orientacoes'){ container.innerHTML = buildOrientacoes(readOnly); loadFormOri(user, readOnly); return; }
+  var t = TEMATICAS[tab];
+  if(!t){ container.innerHTML=''; return; }
+  var ro = readOnly ? 'readonly' : '';
+  var roCb = readOnly ? 'disabled' : '';
+  var u = readOnly ? adminViewingUser : user;
+  var onChange = "autoSave('"+u+"','"+tab+"')";
+  var html = '';
+  // escola header
+  html += '<div class="escola-header" style="background:#f0faf6;border-color:#a8d8c8">';
+  html += '<span style="font-size:12px;font-weight:700;color:#149078">&#127979; '+esc(ESCOLA_NOME)+'</span>';
+  html += '<span style="color:#555;margin-left:20px;font-size:11px">&#128100; '+esc(u && USERS[u] ? USERS[u].display : u)+'</span>';
+  html += '</div>';
+  // main table
+  html += '<table class="plan-table"><thead>';
+  html += '<tr><td colspan="9" class="hdr-main">'+esc(t.painel)+'</td></tr>';
+  html += '<tr>';
+  html += '<td colspan="5" class="hdr-gray hdr-section-label">'+esc(t.p1)+'</td>';
+  html += '<td colspan="1" class="hdr-orange hdr-section-label" style="text-align:center">PARTE 2</td>';
+  html += '<td colspan="3" class="hdr-green hdr-section-label">'+esc(t.p3)+'</td>';
+  html += '</tr>';
+  html += '<tr>';
+  html += '<th class="hdr-gray" style="width:28px">#</th>';
+  html += '<th class="hdr-gray" style="min-width:220px;text-align:left">Planejamento - Comportamentos e atitudes esperadas</th>';
+  html += '<th class="hdr-gray" style="width:36px">Plan</th>';
+  html += '<th class="hdr-gray" style="width:36px">Real</th>';
+  html += '<th class="hdr-gray" style="width:90px">Portfólio</th>';
+  html += '<th class="hdr-orange" style="width:120px">'+esc(t.p2)+'</th>';
+  html += '<th class="hdr-green" style="width:110px">Quais?</th>';
+  html += '<th class="hdr-green" style="width:80px">Prazo</th>';
+  html += '<th class="hdr-green" style="width:90px">Melhoria</th>';
+  html += '</tr></thead><tbody>';
+  html += '<tr><td colspan="9" class="basico-lbl">Básico</td></tr>';
+  for(var i=0;i<t.basico.length;i++){ html += buildRow(tab, t.basico[i], readOnly); }
+  html += '<tr><td colspan="9" class="avancado-lbl">Avançado</td></tr>';
+  for(var j=0;j<t.avancado.length;j++){ html += buildRow(tab, t.avancado[j], readOnly); }
+  html += '</tbody></table>';
+  html += buildIndicatorTable(tab+'_est', t.ind_est, tab, readOnly);
+  html += buildIndicatorTable(tab+'_edu', t.ind_edu, tab, readOnly);
+  container.innerHTML = html;
+  loadFormData(tab, user, readOnly);
+  updateAvg(tab+'_est');
+  updateAvg(tab+'_edu');
+}
+
+function buildOrientacoes(readOnly){
+  var ro = readOnly ? 'readonly' : '';
+  var u = readOnly ? adminViewingUser : currentUser;
+  var html = '<div class="escola-header" style="background:#f0faf6;border-color:#a8d8c8">';
+  html += '<span style="font-size:12px;font-weight:700;color:#149078">&#127979; '+esc(ESCOLA_NOME)+'</span>';
+  html += '<span style="color:#555;margin-left:20px;font-size:11px">&#128100; '+esc(u && USERS[u] ? USERS[u].display : u)+'</span>';
+  html += '</div>';
+  html += '<div class="orient-box">';
+  html += '<h3>Orientações para utilização do Plano de Melhoria Contínua dos EDUCADORES</h3>';
+  html += '<p>&#8226; O Plano de Melhoria Contínua é o documento que permite realizar o PDCA da temática pelo educador (realizador) ou líder da temática, contendo planejamento, avaliação e identificação de ações a melhorar.<br>&#8226; Os comportamentos, atitudes e atividades esperadas estão em ordem crescente de complexidade e dependência e devem ser traduzidos em ações intencionais a serem incorporadas no planejamento e na rotina escolar.</p>';
+  html += '<h4>1 - ANTES da aplicação dos comportamentos e atitudes esperados para cada Temática:</h4>';
+  html += '<p>&#8226; Realizar o percurso formativo relacionado à temática.<br>&#8226; Identificar, no Plano de Melhoria Contínua (Parte 1), quais os comportamentos e atitudes que você espera evoluir no bimestre, identificando as prioridades com um "X" na coluna "Plan - Planejado".<br>&#8226; Educadores que estão no nível Básico devem focar seus esforços em melhorar os comportamentos listados no grupo "Básico".<br>&#8226; Educadores que já estão em nível Avançado devem focar seus esforços em melhorar os comportamentos listados no grupo "Avançado".</p>';
+  html += '<h4>2 - DURANTE a aplicação dos comportamentos e atitudes esperados para cada Temática:</h4>';
+  html += '<p>&#8226; Realizar os comportamentos e atitudes planejados para cada Temática registrando como um "X" na coluna "Real - Realizado".<br>&#8226; Fazer monitoramentos frequentes sobre o que foi realizado para garantir a eficiência no processo (atualização bimestral).<br>&#8226; Expressar com naturalidade os comportamentos e atitudes priorizadas, no momento e local planejados.<br>&#8226; Compartilhar seus desafios de melhoria com seus colegas educadores e pedir ajuda, se necessário.</p>';
+  html += '<h4>3 - APÓS a aplicação dos comportamentos e atitudes esperados para cada Temática:</h4>';
+  html += '<p>&#8226; Ao final de cada bimestre: monitorar o Plano de Melhoria Contínua, indicando se a melhoria prevista foi ou não realizada no campo "Melhoria".<br>&#8226; Realizar a autoavaliação, bimestralmente, conforme previsto na AR e definir novas prioridades de melhoria para o bimestre seguinte.<br>&#8226; A Equipe Gestora deverá realizar a pesquisa e o monitoramento dos indicadores de excelência da escola.</p>';
+  html += '<h3>Orientações para utilização dos Indicadores de Excelência das Temáticas</h3>';
+  html += '<p>&#8226; Os indicadores de excelência estão descritos nas avaliações do Realizador (AR2) de cada temática e devem ser medidos bimestralmente a partir de pesquisas com os estudantes e professores da escola, feita pela escola ou SEDUC.<br>&#8226; O objetivo é avaliar se as temáticas geram o valor desejado para educandos ou educadores.<br>&#8226; Seus resultados servem como indicadores de excelência para cada temática e, quando atingida a meta de 7,0, compõem parte da Certificação de Excelência.</p>';
+  html += '</div>';
+  return html;
+}
+
+// saveOri removed — escola and nome are now static (from login)
+
+// ═══════════════════ UPDATE AVG ═══════════════════
+function updateAvg(prefix){
+  var totR=0,totAv=0,totFr=0,totS=0;
+  for(var i=0;i<3;i++){
+    var r=parseFloat(document.getElementById(prefix+'_r_'+i).value)||0;
+    var av=parseFloat(document.getElementById(prefix+'_av_'+i).value)||0;
+    var fr=parseFloat(document.getElementById(prefix+'_fr_'+i).value)||0;
+    var s=parseFloat(document.getElementById(prefix+'_s_'+i).value)||0;
+    totR+=r; totAv+=av; totFr+=fr; totS+=s;
+  }
+  var tot=totR+totAv+totFr+totS;
+  var ws=totR*2.5+totAv*5+totFr*7.5+totS*10;
+  var avg=tot>0?(ws/tot):0;
+  var el=document.getElementById(prefix+'_avg');
+  if(el) el.textContent=tot>0?avg.toFixed(1):'—';
+  var tR=document.getElementById(prefix+'_tot_r'); if(tR) tR.textContent=totR;
+  var tAv=document.getElementById(prefix+'_tot_av'); if(tAv) tAv.textContent=totAv;
+  var tFr=document.getElementById(prefix+'_tot_fr'); if(tFr) tFr.textContent=totFr;
+  var tS=document.getElementById(prefix+'_tot_s'); if(tS) tS.textContent=totS;
+}
+
+// ═══════════════════ COLLECT / LOAD FORM ═══════════════════
+function autoSave(user, tab){
+  var data = collectFormData(tab);
+  // Atualiza cache local imediatamente para o admin ver progresso
+  var key = fbKey(user);
+  if(!_dataCache[key]) _dataCache[key] = {};
+  _dataCache[key][tab] = data;
+  // Salva no Firebase (flashSave é chamado dentro de saveData)
+  saveData(user, tab, data);
+  if(currentUser && USERS[currentUser] && USERS[currentUser].role==='admin'){ renderAdminGrid(); }
+}
+
+function collectFormData(tab){
+  if(tab==='orientacoes'){ return {}; }
+  var t=TEMATICAS[tab];
+  if(!t) return {};
+  var allItems = t.basico.concat(t.avancado);
+  var data={items:{},ind_est:{r:[],av:[],fr:[],s:[],mon:[]},ind_edu:{r:[],av:[],fr:[],s:[],mon:[]}};
+  // escola and nome are static — not stored
+  for(var k=0;k<allItems.length;k++){
+    var id=allItems[k].id;
+    data.items[id]={
+      plan:!!(document.getElementById(tab+'_plan_'+id)||{}).checked,
+      real:!!(document.getElementById(tab+'_real_'+id)||{}).checked,
+      port:(document.getElementById(tab+'_port_'+id)||{}).value||'',
+      aval:(document.getElementById(tab+'_aval_'+id)||{}).value||'',
+      quais:(document.getElementById(tab+'_quais_'+id)||{}).value||'',
+      prazo:(document.getElementById(tab+'_prazo_'+id)||{}).value||'',
+      melh:(document.getElementById(tab+'_melh_'+id)||{}).value||''
+    };
+  }
+  for(var kind of ['est','edu']){
+    for(var i=0;i<3;i++){
+      var p=tab+'_'+kind;
+      data['ind_'+kind].r.push(parseFloat((document.getElementById(p+'_r_'+i)||{}).value)||0);
+      data['ind_'+kind].av.push(parseFloat((document.getElementById(p+'_av_'+i)||{}).value)||0);
+      data['ind_'+kind].fr.push(parseFloat((document.getElementById(p+'_fr_'+i)||{}).value)||0);
+      data['ind_'+kind].s.push(parseFloat((document.getElementById(p+'_s_'+i)||{}).value)||0);
+      data['ind_'+kind].mon.push((document.getElementById(p+'_mon_'+i)||{}).value||'');
+    }
+  }
+  return data;
+}
+
+function loadFormData(tab, user, readOnly){
+  var u = readOnly ? adminViewingUser : user;
+  var data = loadData(u, tab);
+  if(!data) return;
+  // escola and nome are now static — no field to populate
+  var t=TEMATICAS[tab];
+  if(!t||!data.items) return;
+  var allItems=t.basico.concat(t.avancado);
+  for(var k=0;k<allItems.length;k++){
+    var id=allItems[k].id;
+    var d=data.items[id];
+    if(!d) continue;
+    var cbP=document.getElementById(tab+'_plan_'+id); if(cbP) cbP.checked=!!d.plan;
+    var cbR=document.getElementById(tab+'_real_'+id); if(cbR) cbR.checked=!!d.real;
+    var ipP=document.getElementById(tab+'_port_'+id); if(ipP) ipP.value=d.port||'';
+    var slA=document.getElementById(tab+'_aval_'+id); if(slA) slA.value=d.aval||'';
+    var taQ=document.getElementById(tab+'_quais_'+id); if(taQ) taQ.value=d.quais||'';
+    var ipPr=document.getElementById(tab+'_prazo_'+id); if(ipPr) ipPr.value=d.prazo||'';
+    var slM=document.getElementById(tab+'_melh_'+id); if(slM) slM.value=d.melh||'';
+  }
+  for(var kind of ['est','edu']){
+    var d2=data['ind_'+kind];
+    if(!d2) continue;
+    for(var i=0;i<3;i++){
+      var p=tab+'_'+kind;
+      var rEl=document.getElementById(p+'_r_'+i); if(rEl) rEl.value=d2.r[i]||0;
+      var avEl=document.getElementById(p+'_av_'+i); if(avEl) avEl.value=d2.av[i]||0;
+      var frEl=document.getElementById(p+'_fr_'+i); if(frEl) frEl.value=d2.fr[i]||0;
+      var sEl=document.getElementById(p+'_s_'+i); if(sEl) sEl.value=d2.s[i]||0;
+      var mEl=document.getElementById(p+'_mon_'+i); if(mEl) mEl.value=d2.mon[i]||'';
+    }
+    updateAvg(tab+'_'+kind);
+  }
+}
+
+function loadFormOri(user, readOnly){} // loaded inline in buildOrientacoes
+
+// ═══════════════════ TAB SWITCHING ═══════════════════
+function switchTab(tab, btn){
+  currentTab=tab;
+  document.querySelectorAll('#teacher-tab-nav .tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  if(btn) btn.classList.add('active');
+  renderTeacherTab(tab, currentUser, false);
+}
+
+function switchAdminTab(tab, btn){
+  adminCurrentTab=tab;
+  document.querySelectorAll('#admin-tab-nav .tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  if(btn) btn.classList.add('active');
+  renderTeacherTab(tab, adminViewingUser, true);
+}
+
+// ═══════════════════ ADMIN PANEL ═══════════════════
+function completionOf(uid){
+  var tabs=['principios','premissas','tutoria','projetovida','acolhimentos','protagonismo'];
+  var totalItems=0, checkedItems=0, tabsDone=0;
+  for(var t=0;t<tabs.length;t++){
+    var d=loadData(uid,tabs[t]);
+    if(!d||!d.items){continue;}
+    var keys=Object.keys(d.items);
+    var tabChecked=0;
+    for(var k=0;k<keys.length;k++){
+      totalItems++;
+      var it=d.items[keys[k]];
+      if(it.plan||it.real){checkedItems++;tabChecked++;}
+    }
+    if(tabChecked>=3) tabsDone++;
+  }
+  var pct = totalItems>0 ? Math.round(checkedItems/totalItems*100) : 0;
+  return {pct:pct, tabsDone:tabsDone, totalTabs:6};
+}
+
+function renderAdminGrid(){
+  var grid=document.getElementById('admin-grid');
+  if(!grid) return;
+  var started=0;
+  var html='';
+  var tabCodes=['principios','premissas','tutoria','projetovida','acolhimentos','protagonismo'];
+  var tabLabels=['PRI','PRE','TUT','PVD','ACO','PRO'];
+  var teacherKeys=Object.keys(USERS).filter(function(u){return USERS[u].role==='teacher';});
+  for(var i=0;i<teacherKeys.length;i++){
+    var uid=teacherKeys[i];
+    var nome=USERS[uid].display;
+    var escola=ESCOLA_NOME;
+    var hasData=hasAnyData(uid);
+    if(hasData) started++;
+    var dots='';
+    for(var t=0;t<tabCodes.length;t++){
+      var td=loadData(uid,tabCodes[t]);
+      var filled=false;
+      if(td&&td.items){
+        var keys=Object.keys(td.items);
+        for(var k=0;k<keys.length;k++){
+          if(td.items[keys[k]].plan||td.items[keys[k]].real){ filled=true; break; }
+        }
+      }
+      dots+='<span class="prog-dot'+(filled?' ok':'')+'" title="'+tabCodes[t]+'">'+tabLabels[t]+'</span>';
+    }
+    var compl=completionOf(uid);
+    var barColor=compl.pct===0?'#ccc':compl.pct<50?'#f0a030':compl.pct<100?'#6ac46a':'#149078';
+    var hdrBg=compl.pct===100?'#0e7a5e':compl.pct>0?'#149078':'#999';
+    var complLabel=compl.pct===0?'Não iniciado':compl.pct<50?'Em andamento':compl.pct<100?'Parcial ('+compl.tabsDone+'/6 temas)':'Concluído ✓';
+    html+='<div class="prof-card" onclick="openProfDetail(\''+uid+'\')">';
+    html+='<div class="prof-card-hdr" style="background:'+hdrBg+'">';
+    html+='<span class="prof-num">'+(i+1)+'</span>';
+    html+='<span style="font-size:10.5px">'+esc(nome)+'</span>';
+    html+='</div>';
+    html+='<div class="prof-card-body">';
+    html+='<div class="prof-escola" style="font-size:10px;color:#888;margin-bottom:4px">'+esc(escola)+'</div>';
+    html+='<div class="prof-progress">'+dots+'</div>';
+    html+='<div class="compl-bar-wrap"><div class="compl-bar-fill" style="width:'+compl.pct+'%;background:'+barColor+'"></div></div>';
+    html+='<div class="compl-pct"><span class="compl-icon" style="background:'+barColor+'"></span><b>'+compl.pct+'%</b>&nbsp;'+esc(complLabel)+'</div>';
+    html+='</div></div>';
+  }
+  grid.innerHTML=html;
+  var completed100=0;
+  var allTeacherKeys=Object.keys(USERS).filter(function(u){return USERS[u].role==='teacher';});
+  for(var ti=0;ti<allTeacherKeys.length;ti++){
+    if(completionOf(allTeacherKeys[ti]).pct===100) completed100++;
+  }
+  var ss=document.getElementById('stat-started');
+  if(ss) ss.textContent=started;
+  var st=document.getElementById('stat-total');
+  if(st) st.textContent=teacherKeys.length;
+  var sc=document.getElementById('stat-completed');
+  if(sc) sc.textContent=completed100;
+}
+
+function openProfDetail(uid){
+  adminViewingUser=uid;
+  var lbl=document.getElementById('admin-viewing-label');
+  if(lbl) lbl.textContent='Visualizando plano de: '+esc(USERS[uid]?USERS[uid].display:uid);
+  document.getElementById('admin-panel').style.display='none';
+  document.getElementById('admin-detail').style.display='block';
+  adminCurrentTab='principios';
+  document.querySelectorAll('#admin-tab-nav .tab-btn').forEach(function(b,i){ b.classList.toggle('active',i===0); });
+  renderTeacherTab('principios', uid, true);
+}
+
+function backToAdmin(){
+  adminViewingUser=null;
+  document.getElementById('admin-panel').style.display='block';
+  document.getElementById('admin-detail').style.display='none';
+  document.getElementById('admin-content').innerHTML='';
+  renderAdminGrid();
+}
+
+// ═══════════════════ SESSION RESTORE ═══════════════════
+document.addEventListener('DOMContentLoaded', function(){
+  var saved = null;
+  try{ saved = sessionStorage.getItem('pmc_session_user'); }catch(e){}
+  if(saved && USERS[saved]){
+    currentUser = saved;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('top-user-label').textContent = USERS[saved].display;
+    if(USERS[saved].role === 'admin'){
+      document.getElementById('admin-view').style.display = 'block';
+      preloadAllTeachers().then(function(){
+        renderAdminGrid();
+      });
+    } else {
+      document.getElementById('teacher-view').style.display = 'block';
+      currentTab = 'principios';
+      var firstBtn = document.querySelector('#teacher-tab-nav .tab-btn');
+      if(firstBtn){ firstBtn.classList.add('active'); }
+      showLoading('⟳ Carregando seus dados...');
+      preloadUserData(saved).then(function(){
+        hideLoading();
+        renderTeacherTab('principios', currentUser, false);
+        subscribeUser(saved);
+      });
+    }
+  }
+});
+</script>
+</body>
+</html>
