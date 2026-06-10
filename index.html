@@ -4,9 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Planos de Melhoria Contínua PEI - Sistema Institucional</title>
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<!-- Sem dependências externas — dados persistidos em localStorage -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,Helvetica,sans-serif;font-size:11px;background:#eaeaea;color:#222}
@@ -67,6 +65,15 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:11px;background:#eaeaea;co
 .cb-cell input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:#149078}
 .link-input{width:100%;border:none;border-bottom:1px dashed #bbb;font-size:10px;color:#0563C1;padding:1px 3px}
 .link-input:focus{outline:none;border-bottom-color:#149078}
+.port-bar{display:flex;align-items:center;gap:8px;background:#f0faf6;border:1px dashed #a8d8c8;border-radius:4px;padding:5px 10px;margin-bottom:6px}
+.port-bar label{font-size:10.5px;font-weight:700;color:#149078;white-space:nowrap}
+.port-bar input[type=url]{flex:1;border:none;border-bottom:1px dashed #bbb;font-size:10px;color:#0563C1;padding:2px 4px;background:transparent}
+.port-bar input[type=url]:focus{outline:none;border-bottom-color:#149078}
+.port-bar a.port-open{font-size:10px;color:#fff;background:#149078;padding:3px 8px;border-radius:3px;text-decoration:none;white-space:nowrap}
+.port-bar a.port-open:hover{background:#0f7060}
+.port-icon-cell{text-align:center}
+.port-icon-cell a{font-size:14px;text-decoration:none;color:#149078}
+.port-icon-cell span{font-size:11px;color:#bbb}
 .sel-aval,.sel-melhoria{width:100%;border:1px solid #ccc;border-radius:2px;font-size:10px;padding:2px}
 .sel-aval:focus,.sel-melhoria:focus{outline:none;border-color:#149078}
 .txt-input{width:100%;border:none;border-bottom:1px dashed #bbb;font-size:10px;padding:1px 3px;resize:none;font-family:Arial,sans-serif}
@@ -213,6 +220,8 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:11px;background:#eaeaea;co
       <button class="tab-btn" data-tab="projetovida">PROJETO DE VIDA</button>
       <button class="tab-btn" data-tab="acolhimentos">ACOLHIMENTOS</button>
       <button class="tab-btn" data-tab="protagonismo">PROTAGONISMO</button>
+      <button class="tab-btn" data-tab="excelencia">EXCEL&#202;NCIA ACAD&#202;MICA</button>
+      <button class="tab-btn" data-tab="eletivas">ELETIVAS</button>
       <button class="tab-btn" data-tab="orientacoes">ORIENTA&#199;&#213;ES</button>
     </div>
     <div class="content-area" id="teacher-content"></div>
@@ -246,6 +255,8 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:11px;background:#eaeaea;co
         <button class="tab-btn" data-tab="projetovida">PROJETO DE VIDA</button>
         <button class="tab-btn" data-tab="acolhimentos">ACOLHIMENTOS</button>
         <button class="tab-btn" data-tab="protagonismo">PROTAGONISMO</button>
+        <button class="tab-btn" data-tab="excelencia">EXCEL&#202;NCIA ACAD&#202;MICA</button>
+        <button class="tab-btn" data-tab="eletivas">ELETIVAS</button>
         <button class="tab-btn" data-tab="orientacoes">ORIENTA&#199;&#213;ES</button>
       </div>
       <div class="content-area" id="admin-content"></div>
@@ -352,7 +363,7 @@ function doLogin(){
 function doLogout(){
   currentUser = null; adminViewingUser = null;
   try{ sessionStorage.removeItem('pmc_session_user'); }catch(e){}
-  // Limpa listeners Firebase e cache
+  // Limpa listeners e cache
   unsubscribeAll();
   _dataCache = {};
   document.getElementById('app').style.display = 'none';
@@ -365,40 +376,30 @@ function doLogout(){
   document.getElementById('inp-pass').value = '';
 }
 
-// ═══════════════════ FIREBASE CONFIG ═══════════════════
-// ▼▼▼ SUBSTITUA pelos valores do seu projeto Firebase ▼▼▼
-var firebaseConfig = {
-  apiKey: "AIzaSyAE_jXs3nk0KfvSTFyvujfAE-LUiteCp74",
-  authDomain: "plano-de-melhoria.firebaseapp.com",
-  databaseURL: "https://plano-de-melhoria-default-rtdb.firebaseio.com",
-  projectId: "plano-de-melhoria",
-  storageBucket: "plano-de-melhoria.firebasestorage.app",
-  messagingSenderId: "971231344672",
-  appId: "1:971231344672:web:7935adcf4e922029882445"
-};
-firebase.initializeApp(firebaseConfig);
-var db = firebase.database();
-
-// ═══════════════════ STORAGE (Firebase Realtime Database) ═══════════════════
-// Cache local para evitar múltiplas leituras desnecessárias
+// ═══════════════════ STORAGE (localStorage) ═══════════════════
+// Cache local em memória
 var _dataCache = {};
 
-// Gera a chave segura para o Firebase (sem caracteres proibidos)
+// Gera a chave de armazenamento
 function fbKey(user){
   return user.replace(/[.#$\[\]/]/g, '_');
 }
 
-// Salva no Firebase + atualiza cache local
+// Salva no localStorage + atualiza cache local
 function saveData(user, tab, data){
   var key = fbKey(user);
   if(!_dataCache[key]) _dataCache[key] = {};
   _dataCache[key][tab] = data;
-  db.ref('pmc/' + key + '/' + tab).set(data)
-    .then(function(){ flashSave(); })
-    .catch(function(err){ console.error('Erro ao salvar no Firebase:', err); flashSave('erro'); });
+  try{
+    var stored = JSON.parse(localStorage.getItem('pmc_data') || '{}');
+    if(!stored[key]) stored[key] = {};
+    stored[key][tab] = data;
+    localStorage.setItem('pmc_data', JSON.stringify(stored));
+    flashSave();
+  } catch(err){ console.error('Erro ao salvar:', err); flashSave('erro'); }
 }
 
-// Carrega do cache local (preenchido pelo listener em tempo real)
+// Carrega do cache local
 function loadData(user, tab){
   var key = fbKey(user);
   return (_dataCache[key] && _dataCache[key][tab]) ? _dataCache[key][tab] : null;
@@ -408,7 +409,7 @@ function loadData(user, tab){
 function hasAnyData(user){
   var key = fbKey(user);
   if(!_dataCache[key]) return false;
-  var tabs=['principios','premissas','tutoria','projetovida','acolhimentos','protagonismo'];
+  var tabs=['principios','premissas','tutoria','projetovida','acolhimentos','protagonismo','excelencia','eletivas'];
   for(var i=0;i<tabs.length;i++){ if(_dataCache[key][tabs[i]]) return true; }
   return false;
 }
@@ -439,45 +440,23 @@ function hideLoading(){
   s.classList.remove('show');
 }
 
-// Carrega todos os dados de um usuário do Firebase e os coloca no cache
-// Retorna uma Promise que resolve quando os dados estão prontos
+// Carrega todos os dados de um usuário do localStorage para o cache
+// Retorna uma Promise (mantém a mesma interface)
 function preloadUserData(user){
   var key = fbKey(user);
   return new Promise(function(resolve){
-    db.ref('pmc/' + key).once('value', function(snapshot){
-      _dataCache[key] = snapshot.val() || {};
-      resolve(_dataCache[key]);
-    }, function(err){
-      console.error('Erro ao carregar dados:', err);
-      _dataCache[key] = {};
-      resolve({});
-    });
+    try{
+      var stored = JSON.parse(localStorage.getItem('pmc_data') || '{}');
+      _dataCache[key] = stored[key] || {};
+    } catch(e){ _dataCache[key] = {}; }
+    resolve(_dataCache[key]);
   });
 }
 
-// Assina listener em tempo real para um usuário (útil no admin para ver mudanças ao vivo)
+// Compatibilidade: subscribeUser e unsubscribeAll não fazem nada (não há listeners em tempo real)
 var _activeListeners = {};
-function subscribeUser(user){
-  var key = fbKey(user);
-  if(_activeListeners[key]) return; // já inscrito
-  _activeListeners[key] = db.ref('pmc/' + key).on('value', function(snapshot){
-    _dataCache[key] = snapshot.val() || {};
-    // Se o admin está visualizando este usuário, re-renderiza o painel
-    if(adminViewingUser === user){
-      renderTeacherTab(adminCurrentTab, user, true);
-    }
-    // Atualiza grid do admin se estiver visível
-    if(currentUser && USERS[currentUser] && USERS[currentUser].role === 'admin'){
-      renderAdminGrid();
-    }
-  });
-}
-function unsubscribeAll(){
-  Object.keys(_activeListeners).forEach(function(key){
-    db.ref('pmc/' + key).off('value', _activeListeners[key]);
-  });
-  _activeListeners = {};
-}
+function subscribeUser(user){ /* localStorage não tem listeners em tempo real */ }
+function unsubscribeAll(){ _activeListeners = {}; }
 
 // Pré-carrega dados de TODOS os professores (para o admin)
 function preloadAllTeachers(){
@@ -533,14 +512,14 @@ var TEMATICAS = {
     ],
     ind_est:{
       title:'Indicador de Excelência - Temática PRINCÍPIOS (AR2) - Avaliação da escola pelos Estudantes',
-      qs:["Os professores se preocupam comigo, conhecem minhas necessidades e estão sempre disponíveis para me ajudar quando necessito?",
-          "Os professores se preocupam com meu aprendizado e me ajudam a aprender cada vez mais?",
-          "Os estudantes têm espaço para se envolver e propor ações para melhorar a escola e comunidade?"]
+      qs:["Os educadores estão disponíveis para me ajudar quando necessito?",
+          "Os educadores se preocupam com o meu aprendizado?",
+          "Os estudantes têm espaço para se envolver e propor ações para melhorar a escola e a comunidade?"]
     },
     ind_edu:{
       title:'Avaliação do Líder (DIRETOR) - realizada pelos Educadores (AL2) - Temática PRINCÍPIOS',
       qs:["O Diretor me orienta sobre a prática dos Princípios e me ajuda quando preciso?",
-          "O Diretor conversa, faz alinhamentos e combinados com os educadores para melhorar a prática dos Princípios na escola?",
+          "O Diretor faz alinhamentos e combinados com os educadores para melhorar a prática dos Princípios na escola?",
           "O Diretor conversa com os estudantes para entender suas necessidades e satisfação com a prática dos educadores?"]
     }
   },
@@ -582,9 +561,9 @@ var TEMATICAS = {
     ],
     ind_est:{
       title:'Indicador de Excelência - Temática PREMISSAS (AR2) - Avaliação da escola pelos Educadores',
-      qs:["Os educadores assumem suas responsabilidades e são proativos nas soluções de problemas e melhoria contínua tornando-se exemplo para a Comunidade Escolar.",
-          "A escola consegue evoluir continuamente seus resultados e atingir suas metas de forma consistente a partir de Instrumentos de Gestão compartilhados.",
-          "Os educadores buscam aperfeiçoamento contínuo das suas habilidades e competências para melhorar o desempenho nas suas atribuições."]
+      qs:["Os educadores são proativos na identificação de problemas e oportunidades de melhoria nas práticas pedagógicas?",
+          "Os educadores monitoram os indicadores de resultado das suas práticas pedagógicas?",
+          "Os educadores são comprometidos com o desenvolvimento contínuo de suas práticas pedagógicas?"]
     },
     ind_edu:{
       title:'Avaliação do Líder (DIRETOR) - realizada pelos Educadores (AL2) - Temática PREMISSAS',
@@ -625,15 +604,15 @@ var TEMATICAS = {
     ],
     ind_est:{
       title:'Indicador de Excelência - Temática TUTORIA (AR2) - Avaliação da escola pelos Estudantes',
-      qs:["O meu tutor conversa comigo sobre os meus avanços, me elogia e me incentiva a buscar o meu Projeto de Vida?",
-          "O meu tutor se interessa pelo meu aprendizado, me ajuda a estudar e a aprender mais?",
-          "O meu tutor me acolhe e me ajuda quando preciso de apoio diante dos meus desafios pessoais?"]
+      qs:["O meu tutor me incentiva a buscar o meu Projeto de Vida?",
+          "O meu tutor me ajuda a melhorar minhas notas?",
+          "O meu tutor me acolhe quando preciso de apoio diante dos meus desafios?"]
     },
     ind_edu:{
       title:'Avaliação do Líder (VICE-DIRETOR) - realizada pelos Educadores (AL2) - Temática TUTORIA',
       qs:["O Vice-diretor me orienta sobre a Tutoria e me ajuda quando preciso.",
-          "Vejo o Vice-diretor conversando/fazendo alinhamentos e combinados com os Tutores para melhorar a Tutoria na escola.",
-          "Vejo o Vice-diretor conversando com os estudantes, principalmente aqueles estudantes que mais precisam de ajuda."]
+          "O Vice-diretor faz alinhamentos e combinados com os Tutores para melhorar a Tutoria na escola.",
+          "O Vice-diretor conversa com os estudantes, principalmente aqueles estudantes que mais precisam de ajuda."]
     }
   },
   projetovida:{
@@ -681,14 +660,14 @@ var TEMATICAS = {
     ],
     ind_est:{
       title:'Indicador de Excelência - Temática PROJETO DE VIDA (AR2) - Avaliação da escola pelos Estudantes',
-      qs:["Os educadores contam os seus sonhos e se interessam pelos meus sonhos.",
-          "Os educadores me acompanham e me apoiam na construção do meu Projeto de Vida.",
-          "Os educadores apoiam o meu desenvolvimento pessoal e acadêmico para alcançar meu Projeto de Vida."]
+      qs:["Os educadores se interessam pelos meus sonhos?",
+          "Os educadores me apoiam na construção do meu Projeto de Vida?",
+          "Os educadores me apoiam para alcançar meu Projeto de Vida?"]
     },
     ind_edu:{
       title:'Avaliação do Líder (VICE-DIRETOR) - realizada pelos Educadores (AL2) - Temática PROJETO DE VIDA',
       qs:["O Vice-Diretor me orienta sobre como apoiar meus estudantes em relação aos seus Projetos de Vida.",
-          "O Vice-Diretor conversa, faz alinhamentos e combinados com os educadores para melhorar a prática do Projeto de Vida na escola.",
+          "O Vice-Diretor faz alinhamentos e combinados com os educadores para melhorar a prática do Projeto de Vida na escola.",
           "O Vice-Diretor conversa com os estudantes para entender a evolução e satisfação com seus Projetos de Vida."]
     }
   },
@@ -723,15 +702,15 @@ var TEMATICAS = {
     ],
     ind_est:{
       title:'Indicador de Excelência - Temática ACOLHIMENTOS (AR2) - Avaliação da escola pelos Estudantes',
-      qs:["Os educadores acolhem e valorizam minhas necessidades e o que eu tenho a dizer.",
-          "Sou recebido diariamente com entusiasmo e me sinto bem-vindo na escola.",
-          "A escola promove um ambiente seguro e acolhedor, onde os estudantes podem expressar livremente suas emoções."]
+      qs:["Os educadores acolhem minhas necessidades?",
+          "Eu me sinto bem-vindo na escola?",
+          "A escola promove um ambiente seguro para expressar livremente minhas emoções?"]
     },
     ind_edu:{
       title:'Avaliação do Líder (DIRETOR) - realizada pelos Educadores (AL2) - Temática ACOLHIMENTOS',
-      qs:["O Diretor me acolhe, valoriza minhas dúvidas e necessidades e o que eu tenho a dizer.",
-          "O Diretor me recebe diariamente com entusiasmo e eu me sinto bem-vindo e pertencente à escola.",
-          "O Diretor promove um ambiente seguro e acolhedor, onde todos podem expressar livremente suas emoções."]
+      qs:["O Diretor me acolhe, valoriza minhas dúvidas e necessecidades e o que eu tenho a dizer.",
+          "O Diretor me recebe diariamete com entusiasmo e eu me sinto bem-vindo e pertencente à escola.",
+          "O Diretor promove um ambiente seguro e acolhedor, onde todos podem expressar livremente suas emoções."]
     }
   },
   protagonismo:{
@@ -772,14 +751,115 @@ var TEMATICAS = {
     ind_est:{
       title:'Indicador de Excelência - Temática PRÁTICAS DE PROTAGONISMO JUVENIL (AR2) - Avaliação da escola pelos Estudantes',
       qs:["Participo ativamente da construção de soluções para melhoria da minha escola.",
-          "Me sinto responsável pelos meus estudos e consequências das minhas escolhas.",
-          "Os educadores apoiam, orientam e estimulam o meu protagonismo."]
+          "Eu me sinto responsável pelos meus resultados de aprendizagem?",
+          "Os educadores apoiam o meu protagonismo?"]
     },
     ind_edu:{
       title:'Avaliação do Líder (DIRETOR) - realizada pelos Educadores (AL2) - Temática PRÁTICAS DE PROTAGONISMO JUVENIL',
       qs:["O Diretor realiza formações e me orienta sobre como despertar o protagonismo dos estudantes em todas as suas etapas.",
           "O Diretor se mostra aberto às sugestões e iniciativas dos estudantes na solução dos problemas da escola e da comunidade.",
-          "O Diretor é referência de líder protagonista, servindo de exemplo para professores e estudantes."]
+          "O Diretor é referencia de líder protagonista, servindo de exemplo para professores e estudantes."]
+    }
+  },
+  excelencia:{
+    label:"EXCELÊNCIA ACADÊMICA",
+    painel:'Plano de Melhoria Contínua dos EDUCADORES - Temática EXCELÊNCIA ACADÊMICA',
+    p1:'PARTE 1 - Ficha de Aplicação (FA)',
+    p2:'Autoavaliação (AR1)',
+    p3:'PARTE 3 - Comportamentos e atitudes a melhorar',
+    basico:[
+      {id:1,desc:"Sou assíduo."},
+      {id:2,desc:"Realizo os Percursos: Premissas, Princípios, Projeto de Vida e Tutoria."},
+      {id:3,desc:"Planejo, realizo e monitoro rotineiramente os Planos de Melhoria das temáticas: Premissas, Princípios, Projeto de Vida e Tutoria. Avanço e melhoro continuamente."},
+      {id:4,desc:"Realizo o Percurso Excelência Acadêmica."},
+      {id:5,desc:"Participo de atividades de tira dúvidas, alinhamentos de entendimento dos conteúdos do Percurso Excelência Acadêmica e construo combinados com meus pares e o CGPG."},
+      {id:6,desc:"Planejo, realizo e monitoro rotineiramente os Planos de Melhoria do Percurso Excelência Acadêmica. Avanço e melhoro continuamente."},
+      {id:7,desc:"Participo de formações dos programas e projetos pedagógicos aplicáveis na escola: Orientação de Estudos, Eletivas Fundamentos, Sou+Recomposição, Eletivas, Professor Tutor, Aluno Monitor e Projeto Olímpiadas de Matemática e de Redação."},
+      {id:8,desc:"Garanto um boa Gestão da Sala de Aula por meio de práticas exitosas dos Princípios, com a corresponsabilidade dos estudantes."},
+      {id:9,desc:"Construo, colaborativamente, os combinados com estudantes que apoiam a boa convivência, respeito e colaboração na sala de aula."},
+      {id:10,desc:"Acolho os estudantes, em todos os espaços e momentos da escola, realizo as trocas dos pequenos nadas, conto os meus sonhos e o meu Projeto de Vida para os estudantes, como também me interesso pelos sonhos e Projeto de Vida deles."},
+      {id:11,desc:"Nas minhas aulas associo a aprendizagem com o caminho necessário para o alcance dos sonhos e Projeto de Vida."},
+      {id:12,desc:"Mostro o significado da aprendizagem para a vida do estudante em todas as suas dimensões, para além da escola."},
+      {id:13,desc:"Garanto o interesse e a assiduidade dos estudantes nas minhas aulas, por meio de aulas atrativas e significativas."},
+      {id:14,desc:"Construo o/os Guia/Guias de Aprendizagem referente/s a Formação Geral Básica com base no Guia do Currículo Priorizado."},
+      {id:15,desc:"Participo da aplicação e análise dos resultados da Avaliação Diagnóstica do inicio do ano realizada pela SEDUC."},
+      {id:16,desc:"Faço o planejamento das minhas aulas /programas/projetos aplicáveis na escola: Orientação de Estudos, Eletivas Fundamentos, Sou + Recomposição e Professor Tutor, Eletivas, Aluno Monitor e Projeto Olímpiadas de Matemática e de Redação. com base na análise dos resultados da Avaliação Diagnóstica do início do ano."},
+      {id:17,desc:"Alinho e valido com o CGPG os planejamentos das aulas /programas/projetos da escola, as quais sou responsável."},
+      {id:18,desc:"Apresento para os meus estudantes os planejamentos das aulas, programas e projetos escolares sob minha responsabilidade, com o obejtivo de engajá-los nas suas jornadas de aprendizagem, conectando a aprendizagem ao alcance do Projeto de Vida, ao Protagonismo Juvenil e à Formação Integral."},
+      {id:19,desc:"Realizo e monitoro a aprendizagem dos estudantes nas minhas aulas /programas/projetos da escola. Faço monitoramento bimestralmente."},
+      {id:20,desc:"Faço alinhamentos, combinados e monitoro bimestralmente e juntamente com o CGPG os resultados da aprendizagem dos estudantes das minhas aulas /programas/projetos da escola."},
+      {id:21,desc:"Participo da aplicação e análise dos resultados da Avaliação Diagnóstica do meio do ano realizada pela SEDUC."},
+      {id:22,desc:"Com base na análise dos resultados da Avaliação Diagnóstica do meio do ano realizada pela SEDUC: Realizo as atividades 16, 17, 18, 19 e 20."}
+    ],
+    avancado:[
+      {id:23,desc:"Com base na análise dos resultados das Avaliações Diagnósticas do início/meio do ano, juntamente com os professores da MINHA ÁREA DO CONHECIMENTO fazemos os planejamentos das aulas/programas/projetos aplicáveis na escola, considerando a Prática Pedagógica COMPLEMENTARIDADE. Exemplo: habilidades de conhecimento prévio das aprendizagens essenciais do Guia do Currículo Priorizado. Alinho e valido com professores e o CGPG."},
+      {id:24,desc:"Realizo e monitoro o aprendizado dos estudantes nas minhas aulas /programas/projetos da escola. Faço monitoramento bimestralmente juntamente com os professores da MINHA ÁREA DO CONHECIMENTO, considerando a Prática Pedagógica COMPLEMENTARIDADE. Alinho com o CGPG."},
+      {id:25,desc:"Com base na análise dos resultados das Avaliações Diagnósticas do início/meio do ano, juntamente com os professores da MINHA ÁREA DO CONHECIMENTO fazemos os planejamentos das aulas/programas/projetos aplicáveis na escola, considerando as Práticas Pedagógicas COMPLEMENTARIDADE e INTERDISCIPLINARIDADE. Alinho e valido com professores e o CGPG."},
+      {id:26,desc:"Realizo e monitoro o aprendizado dos estudantes nas minhas aulas /programas/projetos da escola. Faço monitoramento bimestralmente juntamente com os professores da MINHA ÁREA DO CONHECIMENTO, considerando as Práticas Pedagógicas COMPLEMENTARIDADE e INTERDISCIPLINARIDADE. Alinho com o CGPG."},
+      {id:27,desc:"Com base na análise dos resultados das Avaliações Diagnósticas do início/meio do ano, juntamente com os professores da MINHA ÁREA DO CONHECIMENTO fazemos os planejamentos das aulas/programas/projetos aplicáveis na escola, considerando as Práticas Pedagógicas COMPLEMENTARIDADE, INTERDISCIPLINARIDADE e MULTIDISCIPLINARIDADE. Alinho e valido com professores e o CGPG."},
+      {id:28,desc:"Realizo e monitoro o aprendizado dos estudantes nas minhas aulas /programas/projetos da escola. Faço monitoramento bimestralmente juntamente com os professores da MINHA ÁREA DO CONHEIMENTO, considerando as Práticas Pedagógicas COMPLEMENTARIDADE, INTERDISCIPLINARIDADE e MULTIDISCIPLINARIDADE. Alinho com o CGPG."},
+      {id:29,desc:"Com base na análise dos resultados das Avaliações Diagnósticas do início/meio do ano, juntamente com TODOS PROFESSORES das QUATRO ÁREAS DO CONHECIMENTO fazemos os planejamentos das aulas/programas/projetos aplicáveis na escola, considerando a Prática Pedagógica COMPLEMENTARIDADE. Alinho e valido com professores e o CGPG."},
+      {id:30,desc:"Realizo e monitoro o aprendizado dos estudantes nas minhas aulas /programas/projetos da escola. Faço monitoramento bimestralmente juntamente com TODOS PROFESSORES das QUATRO ÁREAS DO CONHECIMENTO, considerando a Prática Pedagógica COMPLEMENTARIDADE. Alinho com o CGPG."},
+      {id:31,desc:"Com base na análise dos resultados das Avaliações Diagnósticas do início/meio do ano, juntamente com TODOS PROFESSORES das QUATRO ÁREAS DO CONHECIMENTO fazemos os planejamentos das aulas/programas/projetos aplicáveis na escola, considerando as Práticas Pedagógicas COMPLEMENTARIDADE e INTERDISCIPLINARIDADE. Alinho e valido com professores e o CGPG."},
+      {id:32,desc:"Realizo e monitoro o aprendizado dos estudantes nas minhas aulas /programas/projetos da escola. Faço monitoramento bimestralmente juntamente com TODOS PROFESSORES das QUATRO ÁREAS DO CONHECIMENTO, considerando as Práticas Pedagógicas COMPLEMENTARIDADE e INTERDISCIPLINARIDADE. Alinho com o CGPG."},
+      {id:33,desc:"Com base na análise dos resultados das Avaliações Diagnósticas do início/meio do ano, juntamente com TODOS PROFESSORES das QUATRO ÁREAS DO CONHECIMENTO fazemos os planejamentos das aulas/programas/projetos aplicáveis na escola, considerando as Práticas Pedagógicas COMPLEMENTARIDADE, INTERDISCIPLINARIDADE e MULTIDISCIPLIARIDADE. Alinho e valido com professores e o CGPG."},
+      {id:34,desc:"Realizo e monitoro o aprendizado dos estudantes nas minhas aulas /programas/projetos da escola. Faço monitoramento bimestralmente juntamente com TODOS PROFESSORES das QUATRO ÁREAS DO CONHECIMENTO, considerando as Práticas Pedagógicas COMPLEMENTARIDADE, INTERDISCIPLINARIDADE e MULTIDISCIPLIARIDADE. Alinho com o CGPG."},
+      {id:35,desc:"Com base na análise dos resultados das Avaliações Diagnósticas do do início/meio do ano, SARESP e SAEB faço alinhamentos e monitoramentos com TODOS PROFESSORES e GESTORES sobre os Planos de Melhoria dos Percursos: Premissas, Princípios, Projeto de Vida, Tutoria e Excelência Acadêmica. Indentificamos pontos fortes para reconhecer, elogiar e incentivar os educadores e pontos de atenção para para ajudar os educadores, com enfoque na Excelência Acadêmica e na Formação Integral dos estudantes."}
+    ],
+    ind_est:{
+      title:"Indicador de Excelência - Temática EXCELÊNCIA ACADÊMICA (AR2) - Avaliação da escola pelos Estudantes",
+      qs:["Nas aulas de Orientação de Estudos, conheço minhas dificuldades em Língua Portuguesa e Matemática?", "Nas aulas de Orientação de Estudos, eu estudo os conteúdos que eu tenho maior dificuldade?", "Nas aulas de Orientação de Estudos, os educadores tiram as dúvidas que eu preciso para aprender mais?"]
+    },
+    ind_edu:{
+      title:"Avaliação do Líder (COORDENADOR - CGPG) - realizada pelos Educadores (AL2) - Temática EXCELÊNCIA ACADÊMICA",
+      qs:["O CGPG realiza formações, me apoia e promove o trabalho colaborativo entre os professores.", "O CGPG alinha, valida e monitora os meus planejamentos pedagógicos.", "O CGPG monitora os resultados de aprendizagem, oferece devolutivas para os professores e utiliza os dados para o replanejamento."]
+    }
+  },
+  eletivas:{
+    label:"ELETIVAS",
+    painel:'Plano de Melhoria Contínua dos EDUCADORES - Temática ELETIVAS',
+    p1:'PARTE 1 - Ficha de Aplicação (FA)',
+    p2:'Autoavaliação (AR1)',
+    p3:'PARTE 3 - Comportamentos e atitudes a melhorar',
+    basico:[
+      {id:1,desc:"Planejo, realizo e monitoro rotineiramente os Planos de Melhoria das principais temáticas que possuem interações com as Eletivas: Premissas, Princípios, Projeto de Vida e Tutoria."},
+      {id:2,desc:"Realizo e monitoro rotineiramente o Planos de Melhoria da temática Eletiva."},
+      {id:3,desc:"Analiso os sonhos/Projeto de Vida e os interesses dos estudantes com o suporte do CGPG para planejar a oferta de Eletivas por etapa de ensino (fundamental ou médio)."},
+      {id:4,desc:"Consulto o cardápio de Eletivas disponibilizado pela SEDUC a fim de verificar a possibilidade de adotar/adaptar alguma Eletiva, conforme etapa de ensino do ano/série que a Eletiva irá atuar. Conto com suporte do CGPG."},
+      {id:5,desc:"Adoto ou adapto a Eletiva ofertada pela Seduc, ou elaboro uma Ementa de Eletiva a partir das necessidades de aprendizagens da etapa correspondente do ano/série. Utilizo o diagnóstico dos interesses e sonhos/Projeto de Vida dos estudantes. Considero uma abordagem/metodologia ativa interessante e atrativa, apresentando-a como um desafio estimulante e significativo para o seu desenvolvimento pessoal e acadêmico, visando o Projeto de Vida."},
+      {id:6,desc:"Alinho e valido com o CGPG a Ementa da Eletiva."},
+      {id:7,desc:"Planejo a apresentação da Eletiva para os estudantes, crio o Cartaz de divulgação da Eletiva dando destaque à abordagem/metodologia ativa interessante e atrativa, apresentando-a como um desafio estimulante e significativo para o seu desenvimento pessoal e acadêmico, visando o seu Projeto de Vida. Valido junto ao CGPG."},
+      {id:8,desc:"Realizo ações de sensibilização para engajar os estudantes, utilizo o Cartaz de divulgação da Eletiva. Reforço para os estudantes que eles serão responsáveis pela apresentação da Culminância de forma colaborativa."},
+      {id:9,desc:"Realizo a apresentação da Eletiva para os estudantes no Feirão das Eletivas. Utilizo o Cartaz de divulgação da Eletiva."},
+      {id:10,desc:"Planejo as aulas Eletivas conforme Template para elaboração da ementa das Eletivas. Alinho e valido com o CGPG ."},
+      {id:11,desc:"Apresento a ementa da Eletiva para os estudantes, dando destaque aos desafios estimulantes e significativos para o seu desenvimento pessoal e acadêmico para o alcance dos seus Projetos de Vida."},
+      {id:12,desc:"Realizo as aulas Eletivas e monitoro no processo/ao longo do semestre: a participação e o engajamento dos estudantes com a Eletiva. Se necessário, planejo mudanças na metodologia no processo. Conto com ajuda dos Tutores, Professores de Projeto de Vida e Gestores."},
+      {id:13,desc:"No final da Eletiva avalio os resultados: registro a vivência dos estudantes e os resultados das competências cognitivas e socioemocionais desenvolvidas. Faço anotações dos pontos positivos e os pontos de atenção."},
+      {id:14,desc:"Alinho e valido com o CGPG os resultados da Eletiva."},
+      {id:15,desc:"Apoio os estudantes no planejamento, realização e monitoramento da Culminância, dando destaque no que foi desenvolvido/aprendido nas Eletivas em relação à aprendizagem das habilidades socioemocionais e cognitivas, como também apoio na identificação dos resultados positivos e os pontos de atenção."},
+      {id:16,desc:"Avalio o nível de satisfação dos estudantes com a Eletiva ofertada."},
+      {id:17,desc:"Após a Culminância, alinho e valido com o CGPG os pontos positivos, os pontos de atenção, a aprendizagem concretizada e o nível de satisfação dos estudantes com a Eletiva. Se necessário defino as melhorias para as próximas ofertas."},
+      {id:18,desc:"Dou feedback para os estudantes e celebro com eles os resultados positivos."},
+      {id:19,desc:"Identifico os estudantes com boas contribuições, evoluções e resultados, dou feedback individualmente, elogio e incentivo o estudante para continuar as sua trajetória no alcance do seu Projeto de Vida por meio da aprendizagem."},
+      {id:20,desc:"Solicito para os Tutores, gestores e demais professores que também façam elogios e incentivos para os estudantes com boas contribuições, evoluções e resultados."}
+    ],
+    avancado:[
+      {id:21,desc:"Antes de elaborar a ementa da Eletiva, analiso os dados de aprendizagem dos estudantes de anos anteriores e/ou atuais por meio dos resultados das Avaliações Diagnósticas (internas e externas) para propor ementas de Eletivas com habilidades necessárias (por ano/série) para recompor, recuperar ou aprofundar/avançar na aprendizagem dos estudantes."},
+      {id:22,desc:"Antes de elaborar a ementa da Eletiva, faço alinhamentos com professores das áreas de conhecimento para planejar possíveis práticas pedagógicas: Complementaridades, Interdisciplianridades e Multidisciplinaridades, para elaboração das Eletivas alinhadas com as necessidades de aprendizagem dos estudantes por ano/série."},
+      {id:23,desc:"Elaboro a ementa da Eletiva com base nas necessidades de aprendizagem de acordo com o ano/série. Planejo Recomposição, Recuperação ou Aprofundamento/avanço. Considero uma abordagem/metodologia ativa interessante e atrativa, apresentando-a como um desafio estimulante e significativo para o seu desenvimento pessoal e acadêmico, visando o seu Projeto de Vida."},
+      {id:24,desc:"No planejamento da apresentação da Eletiva para o Feirão das Eletivas, reforço os objetivos de aprendizagem com enfoques em Recomposição, Recuperação ou Aprofundamento/avanço para a busca dos seus Projetos de Vida. Valido junto ao CGPG. Conto co ajuda dos Tutores e Gestores."},
+      {id:25,desc:"Realizo a apresentação da Eletiva para os estudantes no Feirão das Eletivas. Utilizo o Cartaz de divulgação da Eletiva. Destaco os objetivos de aprendizagem com enfoques em Recomposição, Recuperação ou Aprofundamento/avanço para a busca dos seus Projetos de Vida."},
+      {id:26,desc:"Faço agrupamento/enturmação dos estudantes por níveis de proficiência para Recompor, Recuperar ou Aprofundar/avançar. Alinho e valido com professores e com o CGPG."},
+      {id:27,desc:"Conto com a ajuda dos Tutores e gestores para ajudar os estudantes nas escolhas de suas Eletivas de acordo com as suas necessidades de aprendizagem. Destaco os objetivos de aprendizagem com enfoques em Recomposição, Recuperação ou Aprofundamento/avanço para a busca dos seus Projetos de Vida."},
+      {id:28,desc:"Elaboro e implemento Plano de Melhoria basendo-se nos resultados da Eletiva, nível de satisfação dos estudantes com a Eletiva e os resultados da AR2."}
+    ],
+    ind_est:{
+      title:"Indicador de Excelência - Temática ELETIVAS (AR2) - Avaliação da escola pelos Estudantes",
+      qs:["As aulas de Eletivas me ajudam a aprender mais.", "As Eletivas me ajudam alcançar meu Projeto de Vida?", "As aulas de Eletivas despertam o meu interesse?"]
+    },
+    ind_edu:{
+      title:"Avaliação do Líder (COORDENADOR - CGPG) - realizada pelos Educadores (AL2) - Temática ELETIVAS",
+      qs:["O CGPG me orienta, apoia e promove o trabalho colaborativo entre os professores.", "O CGPG alinha, valida e monitora os meus Planos de Melhoria das Eletivas.", "O CGPG monitora os resultados de aprendizagem, oferece devolutivas para os professores e faz replanejamentos."]
     }
   }
 };
@@ -798,7 +878,7 @@ function buildRow(tab, item, readOnly){
   row += '<td>'+esc(item.desc)+focoHtml+'</td>';
   row += '<td class="cb-cell"><input type="checkbox" id="'+tab+'_plan_'+item.id+'" '+roCb+' onchange="'+onChange+'"></td>';
   row += '<td class="cb-cell"><input type="checkbox" id="'+tab+'_real_'+item.id+'" '+roCb+' onchange="'+onChange+'"></td>';
-  row += '<td><input class="link-input" type="url" id="'+tab+'_port_'+item.id+'" placeholder="Link" '+ro+' onchange="'+onChange+'"></td>';
+  row += '<td class="port-icon-cell" id="'+tab+'_portcell_'+item.id+'"><span title="Sem link" style="color:#bbb;font-size:11px">—</span></td>';
   row += '<td><select class="sel-aval" id="'+tab+'_aval_'+item.id+'" '+roCb+' onchange="'+onChange+'">';
   row += '<option value="">—</option><option>1- Raramente</option><option>2- Às vezes</option><option>3- Frequentemente</option><option>4- Sempre</option>';
   row += '</select></td>';
@@ -867,6 +947,18 @@ function renderTeacherTab(tab, user, readOnly){
   html += '<span style="font-size:12px;font-weight:700;color:#149078">&#127979; '+esc(ESCOLA_NOME)+'</span>';
   html += '<span style="color:#555;margin-left:20px;font-size:11px">&#128100; '+esc(u && USERS[u] ? USERS[u].display : u)+'</span>';
   html += '</div>';
+  // barra de portfólio única por temática
+  var portRo = readOnly ? 'readonly' : '';
+  var portOnChange = "updatePortIconsAndSave('"+u+"','"+tab+"')";
+  html += '<div class="port-bar">';
+  html += '<label>&#128196; Link do Portfólio:</label>';
+  html += '<input type="url" id="'+tab+'_port_link" placeholder="Cole aqui o link do portfólio desta temática..." '+portRo+' onchange="'+portOnChange+'" oninput="updatePortIcons(\''+tab+'\')">';
+  if(!readOnly){
+    html += '<a href="#" class="port-open" id="'+tab+'_port_btn" onclick="openPort(\''+tab+'\');return false;">Abrir &#8599;</a>';
+  } else {
+    html += '<span id="'+tab+'_port_btn" style="display:none"></span>';
+  }
+  html += '</div>';
   // main table
   html += '<table class="plan-table"><thead>';
   html += '<tr><td colspan="9" class="hdr-main">'+esc(t.painel)+'</td></tr>';
@@ -880,7 +972,7 @@ function renderTeacherTab(tab, user, readOnly){
   html += '<th class="hdr-gray" style="min-width:220px;text-align:left">Planejamento - Comportamentos e atitudes esperadas</th>';
   html += '<th class="hdr-gray" style="width:36px">Plan</th>';
   html += '<th class="hdr-gray" style="width:36px">Real</th>';
-  html += '<th class="hdr-gray" style="width:90px">Portfólio</th>';
+  html += '<th class="hdr-gray" style="width:36px">Port.</th>';
   html += '<th class="hdr-orange" style="width:120px">'+esc(t.p2)+'</th>';
   html += '<th class="hdr-green" style="width:110px">Quais?</th>';
   html += '<th class="hdr-green" style="width:80px">Prazo</th>';
@@ -892,11 +984,9 @@ function renderTeacherTab(tab, user, readOnly){
   for(var j=0;j<t.avancado.length;j++){ html += buildRow(tab, t.avancado[j], readOnly); }
   html += '</tbody></table>';
   html += buildIndicatorTable(tab+'_est', t.ind_est, tab, readOnly);
-  html += buildIndicatorTable(tab+'_edu', t.ind_edu, tab, readOnly);
   container.innerHTML = html;
   loadFormData(tab, user, readOnly);
   updateAvg(tab+'_est');
-  updateAvg(tab+'_edu');
 }
 
 function buildOrientacoes(readOnly){
@@ -923,14 +1013,44 @@ function buildOrientacoes(readOnly){
 
 // saveOri removed — escola and nome are now static (from login)
 
-// ═══════════════════ UPDATE AVG ═══════════════════
+// ═══════════════════ PORTFÓLIO ÚNICO POR TEMÁTICA ═══════════════════
+function updatePortIcons(tab){
+  var t = TEMATICAS[tab];
+  if(!t) return;
+  var linkEl = document.getElementById(tab+'_port_link');
+  var url = linkEl ? linkEl.value.trim() : '';
+  var allItems = t.basico.concat(t.avancado);
+  for(var k=0;k<allItems.length;k++){
+    var cell = document.getElementById(tab+'_portcell_'+allItems[k].id);
+    if(!cell) continue;
+    if(url){
+      cell.innerHTML = '<a href="'+url+'" target="_blank" title="Abrir portfólio">&#128196;</a>';
+    } else {
+      cell.innerHTML = '<span title="Sem link" style="color:#bbb;font-size:11px">—</span>';
+    }
+  }
+}
+
+function updatePortIconsAndSave(user, tab){
+  updatePortIcons(tab);
+  autoSave(user, tab);
+}
+
+function openPort(tab){
+  var linkEl = document.getElementById(tab+'_port_link');
+  var url = linkEl ? linkEl.value.trim() : '';
+  if(url){ window.open(url,'_blank'); }
+  else { alert('Cole um link de portfólio antes de abrir.'); }
+}
+
+
 function updateAvg(prefix){
   var totR=0,totAv=0,totFr=0,totS=0;
   for(var i=0;i<3;i++){
-    var r=parseFloat(document.getElementById(prefix+'_r_'+i).value)||0;
-    var av=parseFloat(document.getElementById(prefix+'_av_'+i).value)||0;
-    var fr=parseFloat(document.getElementById(prefix+'_fr_'+i).value)||0;
-    var s=parseFloat(document.getElementById(prefix+'_s_'+i).value)||0;
+    var r=parseFloat((document.getElementById(prefix+'_r_'+i)||{}).value)||0;
+    var av=parseFloat((document.getElementById(prefix+'_av_'+i)||{}).value)||0;
+    var fr=parseFloat((document.getElementById(prefix+'_fr_'+i)||{}).value)||0;
+    var s=parseFloat((document.getElementById(prefix+'_s_'+i)||{}).value)||0;
     totR+=r; totAv+=av; totFr+=fr; totS+=s;
   }
   var tot=totR+totAv+totFr+totS;
@@ -951,7 +1071,7 @@ function autoSave(user, tab){
   var key = fbKey(user);
   if(!_dataCache[key]) _dataCache[key] = {};
   _dataCache[key][tab] = data;
-  // Salva no Firebase (flashSave é chamado dentro de saveData)
+  // Salva no localStorage (flashSave é chamado dentro de saveData)
   saveData(user, tab, data);
   if(currentUser && USERS[currentUser] && USERS[currentUser].role==='admin'){ renderAdminGrid(); }
 }
@@ -961,21 +1081,21 @@ function collectFormData(tab){
   var t=TEMATICAS[tab];
   if(!t) return {};
   var allItems = t.basico.concat(t.avancado);
-  var data={items:{},ind_est:{r:[],av:[],fr:[],s:[],mon:[]},ind_edu:{r:[],av:[],fr:[],s:[],mon:[]}};
+  var portLink = (document.getElementById(tab+'_port_link')||{}).value||'';
+  var data={port_link:portLink,items:{},ind_est:{r:[],av:[],fr:[],s:[],mon:[]}};
   // escola and nome are static — not stored
   for(var k=0;k<allItems.length;k++){
     var id=allItems[k].id;
     data.items[id]={
       plan:!!(document.getElementById(tab+'_plan_'+id)||{}).checked,
       real:!!(document.getElementById(tab+'_real_'+id)||{}).checked,
-      port:(document.getElementById(tab+'_port_'+id)||{}).value||'',
       aval:(document.getElementById(tab+'_aval_'+id)||{}).value||'',
       quais:(document.getElementById(tab+'_quais_'+id)||{}).value||'',
       prazo:(document.getElementById(tab+'_prazo_'+id)||{}).value||'',
       melh:(document.getElementById(tab+'_melh_'+id)||{}).value||''
     };
   }
-  for(var kind of ['est','edu']){
+  for(var kind of ['est']){
     for(var i=0;i<3;i++){
       var p=tab+'_'+kind;
       data['ind_'+kind].r.push(parseFloat((document.getElementById(p+'_r_'+i)||{}).value)||0);
@@ -995,6 +1115,10 @@ function loadFormData(tab, user, readOnly){
   // escola and nome are now static — no field to populate
   var t=TEMATICAS[tab];
   if(!t||!data.items) return;
+  // carrega link único de portfólio
+  var portLinkEl = document.getElementById(tab+'_port_link');
+  if(portLinkEl){ portLinkEl.value = data.port_link||''; }
+  updatePortIcons(tab);
   var allItems=t.basico.concat(t.avancado);
   for(var k=0;k<allItems.length;k++){
     var id=allItems[k].id;
@@ -1002,13 +1126,12 @@ function loadFormData(tab, user, readOnly){
     if(!d) continue;
     var cbP=document.getElementById(tab+'_plan_'+id); if(cbP) cbP.checked=!!d.plan;
     var cbR=document.getElementById(tab+'_real_'+id); if(cbR) cbR.checked=!!d.real;
-    var ipP=document.getElementById(tab+'_port_'+id); if(ipP) ipP.value=d.port||'';
     var slA=document.getElementById(tab+'_aval_'+id); if(slA) slA.value=d.aval||'';
     var taQ=document.getElementById(tab+'_quais_'+id); if(taQ) taQ.value=d.quais||'';
     var ipPr=document.getElementById(tab+'_prazo_'+id); if(ipPr) ipPr.value=d.prazo||'';
     var slM=document.getElementById(tab+'_melh_'+id); if(slM) slM.value=d.melh||'';
   }
-  for(var kind of ['est','edu']){
+  for(var kind of ['est']){
     var d2=data['ind_'+kind];
     if(!d2) continue;
     for(var i=0;i<3;i++){
@@ -1042,7 +1165,7 @@ function switchAdminTab(tab, btn){
 
 // ═══════════════════ ADMIN PANEL ═══════════════════
 function completionOf(uid){
-  var tabs=['principios','premissas','tutoria','projetovida','acolhimentos','protagonismo'];
+  var tabs=['principios','premissas','tutoria','projetovida','acolhimentos','protagonismo','excelencia','eletivas'];
   var totalItems=0, checkedItems=0, tabsDone=0;
   for(var t=0;t<tabs.length;t++){
     var d=loadData(uid,tabs[t]);
